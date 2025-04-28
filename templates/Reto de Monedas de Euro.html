@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>¡Aventura de Monedas de Euro!</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: 'Comic Sans MS', 'Chalkboard SE', cursive;
+    }
+    
+    body {
+      margin: 0;
+      padding: 20px;
+      /* Fondo principal con imagen proporcionada */
+      background: url('https://lh3.google.com/u/0/d/1eiZw94obSBKjNtZ_4N0i0IZMbXXgNcpi=w1920-h898-iv2?auditContext=forDisplay') no-repeat center center fixed;
+      background-size: cover;
+      /* Puedes mantener un color de fondo de respaldo si lo deseas */
+      /* background-color: #f0f9ff; */
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+      border: 4px solid #4da6ff;
+    }
+    
+    h1 {
+      text-align: center;
+      color: #ff6b6b;
+      font-size: 2.2rem;
+      margin-top: 0;
+      margin-bottom: 15px;
+      text-shadow: 2px 2px 0 #ffe066;
+    }
+    
+    .top-controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      background: #ffe066;
+      padding: 15px;
+      border-radius: 15px;
+      margin-bottom: 20px;
+      border: 2px dashed #ff6b6b;
+    }
+    
+    button {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 12px;
+      background: #4da6ff;
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 4px 0 #2980b9;
+      transition: .2s;
+      font-size: 1rem;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+    
+    button:hover {
+      background: #2980b9;
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 #2980b9;
+    }
+    
+    button:active {
+      transform: translateY(4px);
+      box-shadow: none;
+    }
+    
+    #new {
+      background: #66bb6a;
+      box-shadow: 0 4px 0 #388e3c;
+    }
+    
+    #new:hover {
+      background: #388e3c;
+      box-shadow: 0 2px 0 #388e3c;
+    }
+    
+    #check {
+      background: #ff7043;
+      box-shadow: 0 4px 0 #e64a19;
+    }
+    
+    #check:hover {
+      background: #e64a19;
+      box-shadow: 0 2px 0 #e64a19;
+    }
+    
+    .challenge {
+      font-weight: bold;
+      font-size: 1.3rem;
+      color: #333;
+      background: #fff;
+      padding: 10px 15px;
+      border-radius: 10px;
+      flex-grow: 1;
+      text-align: center;
+    }
+    
+    .game {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    
+    .panel {
+      background: #fff;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      flex: 1;
+      min-width: 250px;
+      border: 3px solid #4da6ff;
+    }
+    
+    .panel h2 {
+      margin-top: 0;
+      font-size: 1.5rem;
+      text-align: center;
+      color: #4da6ff;
+      border-bottom: 2px dashed #ffe066;
+      padding-bottom: 8px;
+      margin-bottom: 15px;
+    }
+    
+    .coins {
+      background: linear-gradient(135deg, #62878d 0%, #62878d 100%);
+    }
+    
+    .coin, .coin-clone {
+      cursor: grab;
+      margin: 6px;
+      display: inline-block;
+      transition: transform 0.2s;
+    }
+    
+    .coin:hover, .coin-clone:hover {
+      transform: scale(1.1) rotate(5deg);
+    }
+    
+    .coin img, .coin-clone {
+      width: 60px;
+      height: 60px;
+      filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.2));
+    }
+    
+    #dropzone {
+      min-height: 150px;
+      background: #f7f9fc;
+      padding: 15px;
+      border: 3px dashed #4da6ff;
+      border-radius: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    #info {
+      margin-top: 15px;
+      font-size: 1.1rem;
+      text-align: center;
+      color: #555;
+      background: #f7f9fc;
+      padding: 10px;
+      border-radius: 10px;
+    }
+    
+    #result {
+      margin-top: 15px;
+      font-weight: bold;
+      font-size: 1.3rem;
+      text-align: center;
+      padding: 10px;
+      border-radius: 10px;
+      transition: all 0.3s;
+    }
+    
+    .correct {
+      background: #d4edda;
+      color: #155724;
+      animation: celebrate 0.5s ease-in-out 3;
+    }
+    
+    .incorrect {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    
+    @keyframes celebrate {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+    
+    .hint {
+      font-size: 0.9rem;
+      color: #666;
+      text-align: center;
+      margin-top: 10px;
+      font-style: italic;
+    }
+    
+    @media (hover:none) {
+      .coin, .coin-clone {
+        cursor: pointer;
+      }
+    }
+    
+    @media (max-width: 600px) {
+      .top-controls {
+        flex-direction: column;
+      }
+      
+      .game {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>¡Aventura de Monedas!</h1>
+    
+    <div class="top-controls">
+      <span class="challenge" id="challengeText">¡Pulsa "Nueva misión" para comenzar tu aventura!</span>
+      <button id="new">Nueva misión</button>
+      <button id="check">¡Comprobar!</button>
+    </div>
+    
+    <div id="info">¡Ayuda al Hada de las Monedas a recolectar el tesoro correcto!</div>
+
+    <div class="game">
+      <!-- Panel monedas -->
+      <div class="panel coins" id="coinsPanel">
+        <h2>Tu Tesoro</h2>
+        <div class="coin" draggable="true" data-value="1"><img src="https://lh3.google.com/u/0/d/11E4zEoizpa6jHlFic06aH8rSxxlsmH-N=w1920-h898-iv1?auditContext=prefetch" alt="1 céntimo"></div>
+        <div class="coin" draggable="true" data-value="2"><img src="https://lh3.google.com/u/0/d/1MbCv6GihhVoxLnSmQpBydvAcNHS2z13O=w1920-h898-iv1?auditContext=prefetch" alt="2 céntimos"></div>
+        <div class="coin" draggable="true" data-value="5"><img src="https://lh3.google.com/u/0/d/1nfPZwcyrJ5DeF3wvgdz_IyiLDCFSBExL=w1920-h898-iv1?auditContext=prefetch" alt="5 céntimos"></div>
+        <div class="coin" draggable="true" data-value="10"><img src="https://lh3.google.com/u/0/d/10yfjjx5DohOEMrbptszuaqPURYQLBqwY=w1920-h898-iv1?auditContext=prefetch" alt="10 céntimos"></div>
+        <div class="coin" draggable="true" data-value="20"><img src="https://lh3.google.com/u/0/d/1tVY4svlO0oEdUiGD1g7JCIeIB1ZLudYh=w1920-h898-iv1?auditContext=prefetch" alt="20 céntimos"></div>
+        <div class="coin" draggable="true" data-value="50"><img src="https://lh3.google.com/u/0/d/1_AY4R2pB55tkzKsirrgkdmhpV6jBVdPi=w1920-h898-iv1?auditContext=prefetch" alt="50 céntimos"></div>
+        <div class="coin" draggable="true" data-value="100"><img src="https://lh3.google.com/u/0/d/1w9KoUMtOGmt2350YJIY-RAH_1dxrBxIj=w1920-h898-iv1?auditContext=prefetch" alt="1 euro"></div>
+        <div class="coin" draggable="true" data-value="200"><img src="https://lh3.google.com/u/0/d/1uGeaHbi6CVT85CT1J5D4u9CrU2YLvu-d=w1920-h898-iv1?auditContext=prefetch" alt="2 euros"></div>
+      </div>
+
+      <!-- Dropzone -->
+      <div class="panel items">
+        <h2>Tu Respuesta</h2>
+        <div id="dropzone"></div>
+        <div id="result"></div>
+        <div class="hint">Haz clic en las monedas para quitarlas</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const coinValues=[1,2,5,10,20,50,100,200]; // céntimos
+    const coinImgs = {
+      1: "https://lh3.google.com/u/0/d/11E4zEoizpa6jHlFic06aH8rSxxlsmH-N=w1920-h898-iv1?auditContext=prefetch",
+      2: "https://lh3.google.com/u/0/d/1MbCv6GihhVoxLnSmQpBydvAcNHS2z13O=w1920-h898-iv1?auditContext=prefetch",
+      5: "https://lh3.google.com/u/0/d/1nfPZwcyrJ5DeF3wvgdz_IyiLDCFSBExL=w1920-h898-iv1?auditContext=prefetch",
+      10: "https://lh3.google.com/u/0/d/10yfjjx5DohOEMrbptszuaqPURYQLBqwY=w1920-h898-iv1?auditContext=prefetch",
+      20: "https://lh3.google.com/u/0/d/1tVY4svlO0oEdUiGD1g7JCIeIB1ZLudYh=w1920-h898-iv1?auditContext=prefetch",
+      50: "https://lh3.google.com/u/0/d/1_AY4R2pB55tkzKsirrgkdmhpV6jBVdPi=w1920-h898-iv1?auditContext=prefetch",
+      100: "https://lh3.google.com/u/0/d/1w9KoUMtOGmt2350YJIY-RAH_1dxrBxIj=w1920-h898-iv1?auditContext=prefetch",
+      200: "https://lh3.google.com/u/0/d/1uGeaHbi6CVT85CT1J5D4u9CrU2YLvu-d=w1920-h898-iv1?auditContext=prefetch"
+    };
+    
+    const dropzone = document.getElementById('dropzone');
+    const result = document.getElementById('result');
+    const info = document.getElementById('info');
+    let targetAmount = 0, targetCoins = 0;
+    let successSound, errorSound;
+
+    // ---------- Generar reto ----------
+    function generateChallenge() {
+      while (true) {
+        const coinsToUse = Math.floor(Math.random() * 5) + 2; // 2-6
+        let total = 0;
+        for (let i = 0; i < coinsToUse; i++) total += coinValues[Math.floor(Math.random() * coinValues.length)];
+        if (total <= 1000) { targetAmount = total; targetCoins = coinsToUse; return; }
+      }
+    }
+    
+    function formatEuro(c) { return (c / 100).toFixed(2).replace('.', ',') + ' €'; }
+    
+    function newChallenge() {
+      generateChallenge();
+      const challengeText = document.getElementById('challengeText');
+      challengeText.textContent = `Consigue ${formatEuro(targetAmount)} usando exactamente ${targetCoins} moneda${targetCoins > 1 ? 's' : ''}`;
+      challengeText.style.animation = "celebrate 0.5s";
+      setTimeout(() => { challengeText.style.animation = "none"; }, 500);
+      
+      result.textContent = '';
+      result.className = '';
+      resetDropzone();
+      updateInfo();
+      
+      info.textContent = `¡Coloca exactamente ${targetCoins} monedas que sumen ${formatEuro(targetAmount)}!`;
+    }
+
+    // ---------- Añadir / quitar monedas ----------
+    function addCoin(value) {
+      const img = new Image(60, 60);
+      img.src = coinImgs[value];
+      img.classList.add('coin-clone');
+      img.dataset.value = value;
+      img.style.transform = "scale(0)";
+      makeRemovable(img);
+      dropzone.appendChild(img);
+      
+      // Animación de entrada
+      setTimeout(() => {
+        img.style.transform = "scale(1) rotate(" + (Math.random() * 10 - 5) + "deg)";
+      }, 10);
+      
+      updateInfo();
+    }
+    
+    function makeRemovable(el) {
+      // click para eliminar
+      el.addEventListener('click', () => {
+        el.style.transform = "scale(0)";
+        setTimeout(() => { el.remove(); updateInfo(); }, 200);
+      });
+      
+      // drag para eliminar (PC)
+      el.setAttribute('draggable', 'true');
+      el.addEventListener('dragstart', e => e.dataTransfer.setData('removing', 'true'));
+      el.addEventListener('dragend', e => {
+        const below = document.elementFromPoint(e.clientX, e.clientY);
+        if (!dropzone.contains(below)) {
+          el.style.transform = "scale(0)";
+          setTimeout(() => { el.remove(); updateInfo(); }, 200);
+        }
+      });
+    }
+
+    // ---------- Monedas originales: click o arrastrar ----------
+    document.querySelectorAll('.coin').forEach(c => {
+      // click (móvil)
+      c.addEventListener('click', () => {
+        if (!targetAmount) {
+          alert('¡Pulsa "Nueva misión" primero para empezar!');
+          return;
+        }
+        c.style.transform = "scale(0.9)";
+        setTimeout(() => { c.style.transform = ""; }, 150);
+        addCoin(parseInt(c.dataset.value));
+      });
+      
+      // drag (PC)
+      c.addEventListener('dragstart', ev => ev.dataTransfer.setData('value', c.dataset.value));
+    });
+
+    // ---------- Dropzone drag ----------
+    dropzone.addEventListener('dragover', ev => {
+      ev.preventDefault();
+      dropzone.style.background = "#e6f7ff";
+    });
+    
+    dropzone.addEventListener('dragleave', () => {
+      dropzone.style.background = "#f7f9fc";
+    });
+    
+    dropzone.addEventListener('drop', ev => {
+      ev.preventDefault();
+      dropzone.style.background = "#f7f9fc";
+      
+      if (ev.dataTransfer.getData('removing')) return; // quitando
+      
+      if (!targetAmount) {
+        alert('¡Pulsa "Nueva misión" primero para empezar!');
+        return;
+      }
+      
+      const val = parseInt(ev.dataTransfer.getData('value'));
+      if (!isNaN(val)) addCoin(val);
+    });
+
+    // ---------- Comprobación ----------
+    function updateInfo() {
+      const coins = dropzone.querySelectorAll('.coin-clone').length;
+      const total = [...dropzone.querySelectorAll('.coin-clone')].reduce((s, i) => s + parseInt(i.dataset.value), 0);
+      info.textContent = `Llevas ${coins}/${targetCoins} monedas · Total: ${formatEuro(total)}`;
+    }
+    
+    function checkAnswer() {
+      if (!targetAmount) {
+        alert('¡Pulsa "Nueva misión" primero para empezar!');
+        return;
+      }
+      
+      const coins = dropzone.querySelectorAll('.coin-clone').length;
+      const total = [...dropzone.querySelectorAll('.coin-clone')].reduce((s, i) => s + parseInt(i.dataset.value), 0);
+      
+      if (coins === targetCoins && total === targetAmount) {
+        result.textContent = '¡CORRECTO! ¡Lo has conseguido!';
+        result.className = 'correct';
+        
+        // Animación de celebración en monedas
+        dropzone.querySelectorAll('.coin-clone').forEach((coin, i) => {
+          setTimeout(() => {
+            coin.style.transform = "scale(1.2) rotate(" + (Math.random() * 20 - 10) + "deg)";
+            setTimeout(() => {
+              coin.style.transform = "scale(1) rotate(" + (Math.random() * 10 - 5) + "deg)";
+            }, 200);
+          }, i * 100);
+        });
+      } else {
+        result.textContent = `¡Inténtalo de nuevo! Necesitas ${formatEuro(targetAmount)} con ${targetCoins} monedas.`;
+        result.className = 'incorrect';
+        
+        // Sacudir el dropzone
+        dropzone.style.animation = "shake 0.5s";
+        setTimeout(() => { dropzone.style.animation = "none"; }, 500);
+      }
+    }
+    
+    function resetDropzone() {
+      const oldCoins = dropzone.querySelectorAll('.coin-clone');
+      oldCoins.forEach((coin, i) => {
+        setTimeout(() => {
+          coin.style.transform = "scale(0)";
+          setTimeout(() => coin.remove(), 200);
+        }, i * 50);
+      });
+      setTimeout(updateInfo, oldCoins.length * 50 + 200);
+    }
+
+    // ---------- Botones ----------
+    document.getElementById('new').addEventListener('click', () => {
+      const btn = document.getElementById('new');
+      btn.style.transform = "translateY(4px)";
+      btn.style.boxShadow = "none";
+      setTimeout(() => {
+        btn.style.transform = "";
+        btn.style.boxShadow = "";
+        newChallenge();
+      }, 200);
+    });
+    
+    document.getElementById('check').addEventListener('click', () => {
+      const btn = document.getElementById('check');
+      btn.style.transform = "translateY(4px)";
+      btn.style.boxShadow = "none";
+      setTimeout(() => {
+        btn.style.transform = "";
+        btn.style.boxShadow = "";
+        checkAnswer();
+      }, 200);
+    });
+
+    // Añade animación de sacudida
+    document.head.insertAdjacentHTML('beforeend', `
+      <style>
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          20%, 60% { transform: translateX(-5px); }
+          40%, 80% { transform: translateX(5px); }
+        }
+      </style>
+    `);
+  </script>
+</body>
+</html>

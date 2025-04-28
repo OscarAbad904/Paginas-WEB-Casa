@@ -1,0 +1,1430 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tutorial Interactivo: Estructura, Layout y Alineación en HTML y CSS</title>
+    <style>
+        /* --- Estilos Generales Mejorados --- */
+        :root {
+            --primary-color: #005f73; /* Azul oscuro */
+            --secondary-color: #0a9396; /* Turquesa */
+            --accent-color: #ee9b00; /* Naranja */
+            --bg-color: #f8f9fa;
+            --text-color: #343a40;
+            --code-bg: #e9ecef;
+            --border-color: #dee2e6;
+            --interactive-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.7;
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+
+        h1, h2, h3, h4 {
+            color: var(--primary-color);
+            margin-top: 1.5em;
+            margin-bottom: 0.8em;
+            border-bottom: 2px solid var(--secondary-color);
+            padding-bottom: 5px;
+        }
+        h1 { font-size: 2.2em; }
+        h2 { font-size: 1.8em; }
+        h3 { font-size: 1.4em; border-bottom: 1px solid var(--accent-color); }
+        h4 { font-size: 1.2em; border-bottom: none; color: var(--secondary-color); }
+
+
+        p, ul, li {
+            margin-bottom: 1em;
+        }
+        ul { padding-left: 20px; }
+        li { margin-bottom: 0.5em; }
+
+        code {
+            background-color: var(--code-bg);
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-family: Consolas, 'Courier New', monospace;
+            color: var(--primary-color);
+        }
+
+        .code-block {
+            background: var(--code-bg);
+            border: 1px solid var(--border-color);
+            padding: 15px;
+            font-family: Consolas, 'Courier New', monospace;
+            white-space: pre-wrap; /* Mantiene el formato pero ajusta líneas largas */
+            word-wrap: break-word; /* Asegura que palabras largas no desborden */
+            margin-bottom: 15px;
+            border-radius: 5px;
+            overflow-x: auto; /* Scroll horizontal si es necesario */
+        }
+
+        .example {
+            border: 1px dashed var(--secondary-color);
+            padding: 15px;
+            margin-top: 10px;
+            margin-bottom: 30px; /* Aumentado para dejar espacio al botón/código */
+            border-radius: 5px;
+            background-color: var(--interactive-bg);
+        }
+
+        .interactive-controls {
+            background-color: #f1f3f5;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+        .interactive-controls label {
+            font-weight: bold;
+            margin-right: 5px;
+            color: var(--primary-color);
+        }
+        .interactive-controls select,
+        .interactive-controls input[type="number"],
+        .interactive-controls input[type="text"],
+        .interactive-controls button {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+         .interactive-controls button {
+            background-color: var(--secondary-color);
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        .interactive-controls button:hover {
+            background-color: var(--primary-color);
+        }
+
+        /* --- Estilos para la sección del Layout Semántico (Actualizado) --- */
+        .semantic-layout-example header,
+        .semantic-layout-example nav,
+        .semantic-layout-example main,
+        .semantic-layout-example article,
+        .semantic-layout-example section,
+        .semantic-layout-example aside,
+        .semantic-layout-example footer {
+            border: 1px solid #6c757d;
+            padding: 15px; /* Ajustamos padding general */
+            margin: 5px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            position: relative; /* *** Necesario para posicionar el pseudo-elemento hijo *** */
+            padding-top: 30px; /* *** Añadimos más espacio arriba para la etiqueta *** */
+        }
+        .semantic-layout-example nav ul { list-style: none; padding: 0; margin: 0; display: flex; gap: 15px;}
+        /* Ajustamos padding también en main y nav para la etiqueta */
+        .semantic-layout-example main { display: flex; gap: 10px; padding-top: 30px; }
+        .semantic-layout-example nav { padding-top: 30px; }
+
+        .semantic-layout-example article { flex: 3; background-color: #f8f9fa; }
+        .semantic-layout-example aside { flex: 1; background-color: #ced4da; }
+        /* Pequeño ajuste para la sección anidada */
+        .semantic-layout-example section { margin-top: 10px; }
+
+
+        /* === ESTILOS PARA LAS ETIQUETAS IDENTIFICATIVAS (NUEVO) === */
+        .semantic-layout-example header::before,
+        .semantic-layout-example nav::before,
+        .semantic-layout-example main::before,
+        .semantic-layout-example article::before,
+        .semantic-layout-example section::before,
+        .semantic-layout-example aside::before,
+        .semantic-layout-example footer::before {
+            content: ""; /* Definido abajo específicamente */
+            position: absolute; /* Posición absoluta respecto al padre (que tiene position: relative) */
+            top: 4px;         /* Espacio desde arriba */
+            right: 6px;       /* Espacio desde la derecha */
+            font-size: 0.7em; /* Tamaño de fuente pequeño */
+            font-family: Consolas, 'Courier New', monospace; /* Fuente de código */
+            color: #ffffff; /* Texto blanco */
+            background-color: #dc3545; /* Fondo rojo para destacar (puedes cambiarlo) */
+            padding: 2px 6px; /* Pequeño relleno interno */
+            border-radius: 3px; /* Bordes redondeados */
+            z-index: 1; /* Para asegurar que esté por encima si algo se solapa */
+        }
+
+        /* Contenido específico para cada etiqueta */
+        .semantic-layout-example header::before  { content: "<header>"; }
+        .semantic-layout-example nav::before     { content: "<nav>"; }
+        .semantic-layout-example main::before    { content: "<main>"; }
+        .semantic-layout-example article::before { content: "<article>"; }
+        .semantic-layout-example section::before { content: "<section>"; }
+        .semantic-layout-example aside::before   { content: "<aside>"; }
+        .semantic-layout-example footer::before  { content: "<footer>"; }
+
+        /* Box Model Interactivo */
+        .box-model-interactive .box {
+            background-color: var(--secondary-color);
+            color: white;
+            text-align: center;
+            padding: 20px; /* Inicial */
+            margin: 10px; /* Inicial */
+            border: 5px solid var(--primary-color); /* Inicial */
+            width: 150px; /* Ancho del contenido */
+            box-sizing: border-box; /* Importante para incluir padding y border en el width/height total */
+            transition: all 0.3s ease; /* Transición suave */
+        }
+
+        /* Flexbox Interactivo */
+        .flex-container-interactive {
+            display: flex;
+            min-height: 150px; /* Altura mínima para ver alineación vertical */
+            background-color: #f1f3f5;
+            border: 2px dashed var(--primary-color);
+            border-radius: 5px;
+            padding: 10px;
+            transition: all 0.3s ease; /* Transición suave para cambios */
+        }
+        .flex-item-interactive {
+            background-color: var(--secondary-color);
+            color: white;
+            padding: 15px 20px;
+            margin: 5px;
+            border-radius: 4px;
+            text-align: center;
+            font-weight: bold;
+            border: 1px solid var(--primary-color);
+            flex-grow: 0;
+            flex-shrink: 1;
+            flex-basis: auto;
+            width: 150px;
+            min-width: 50px;
+            transition: all 0.3s ease;
+        }
+
+         /* Estilos específicos para el ejemplo de grow/shrink */
+         .flex-item-interactive.grow-1 { flex-grow: 1; }
+         .flex-item-interactive.grow-2 { flex-grow: 2; }
+         .flex-item-interactive.basis-100 { flex-basis: 100px; }
+         .flex-item-interactive.basis-150 { flex-basis: 150px; }
+
+
+        /* Grid Interactivo */
+        .grid-container-interactive {
+            display: grid;
+            min-height: 200px; /* Altura mínima */
+            background-color: #f1f3f5;
+            border: 2px dashed var(--accent-color);
+            border-radius: 5px;
+            padding: 10px;
+            transition: all 0.3s ease; /* Transición suave */
+            /* Valores iniciales - se cambiarán con JS */
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            align-items: stretch; /* Valor por defecto */
+            justify-items: stretch; /* Valor por defecto */
+        }
+        .grid-item-interactive {
+            background-color: var(--accent-color);
+            color: white;
+            padding: 15px;
+            border-radius: 4px;
+            text-align: center;
+            font-weight: bold;
+            border: 1px solid #b36d00; /* Naranja más oscuro */
+            transition: all 0.3s ease; /* Transición suave */
+        }
+        /* Para el ejemplo de spanning */
+        .grid-item-interactive.span-col-2 { grid-column: span 2; background-color: #d98c00;}
+        .grid-item-interactive.span-row-2 { grid-row: span 2; background-color: #b36d00;}
+        .grid-item-interactive.area-A { grid-area: A; background-color: #0a9396; }
+        .grid-item-interactive.area-B { grid-area: B; background-color: #94d2bd;}
+        .grid-item-interactive.area-C { grid-area: C; background-color: #e9d8a6;}
+
+        /* Formularios */
+        .form-example form div {
+            margin-bottom: 15px; /* Espacio entre campos */
+        }
+        .form-example label {
+            display: inline-block;
+            width: 100px; /* Ancho fijo para alinear */
+            margin-right: 10px;
+            vertical-align: top; /* Alinear con la parte superior del input */
+        }
+        .form-example input[type="text"],
+        .form-example input[type="email"],
+        .form-example select,
+        .form-example textarea {
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            width: calc(100% - 120px); /* Ajustar ancho restando el label y margen */
+            box-sizing: border-box; /* Incluir padding y border en el width */
+        }
+        .form-example input[type="submit"] {
+            background-color: var(--accent-color);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            margin-left: 110px; /* Alinear con los inputs */
+        }
+        .form-example input[type="submit"]:hover {
+            background-color: #ee9b00cc; /* Naranja con transparencia */
+        }
+
+        /* Responsivo */
+         .contenedor-responsivo {
+             /* Estilos base (móvil) - No necesita flex aquí */
+         }
+         .columna-responsiva {
+            width: 100%;
+            background-color: var(--secondary-color);
+            padding: 10px;
+            margin-bottom: 10px;
+            color: white;
+            border-radius: 4px;
+            box-sizing: border-box;
+         }
+
+
+        /* === NUEVO: Estilos para Visualizador de Código Interactivo === */
+        .code-viewer {
+            margin-top: -15px; /* Reduce el espacio extra después del ejemplo */
+            margin-bottom: 30px;
+            position: relative;
+        }
+        .toggle-code-btn {
+            display: inline-block;
+            padding: 6px 12px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            margin-bottom: 10px;
+            transition: background-color 0.2s ease;
+        }
+        .toggle-code-btn:hover {
+            background-color: var(--secondary-color);
+        }
+        .code-display {
+            background: var(--code-bg);
+            border: 1px solid var(--border-color);
+            padding: 15px;
+            font-family: Consolas, 'Courier New', monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 0.9em; /* Ligeramente más pequeño */
+        }
+        .code-display pre {
+            margin: 0; /* Evitar márgenes extra del pre */
+        }
+        .code-display code {
+           padding: 0; /* Quitar padding extra del code inline */
+           background-color: transparent; /* Heredar fondo */
+           color: inherit; /* Heredar color */
+           display: block; /* Asegurar que tome el espacio */
+        }
+
+        /* Media Queries para Responsividad del Tutorial */
+        @media (max-width: 768px) {
+            .container {
+                width: 95%;
+                padding: 15px;
+            }
+            h1 { font-size: 1.8em; }
+            h2 { font-size: 1.5em; }
+            .interactive-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .interactive-controls label {
+                margin-bottom: 5px;
+            }
+             .semantic-layout-example main { flex-direction: column; }
+             .form-example label { width: auto; display: block; margin-bottom: 5px; }
+             .form-example input[type="text"],
+             .form-example input[type="email"],
+             .form-example select,
+             .form-example textarea { width: 100%; }
+             .form-example input[type="submit"] { margin-left: 0; width: 100%; }
+
+            /* Ajustar ejemplos interactivos */
+             .flex-container-interactive, .grid-container-interactive {
+                 min-height: auto; /* Permitir que la altura se ajuste */
+             }
+             .semantic-layout-example main { flex-direction: column; }
+
+        }
+         /* Estilos para pantallas más grandes (ej. tablets y superiores) */
+         @media (min-width: 768px) {
+            .contenedor-responsivo {
+                display: flex; /* Usar Flexbox en pantallas grandes */
+                gap: 10px;
+            }
+            .columna-responsiva {
+                /* width: 33%; */ /* Flex lo calculará mejor */
+                flex: 1; /* Hace que las columnas compartan el espacio equitativamente */
+                margin-bottom: 0; /* Quitar margen inferior ya que están en flex */
+            }
+        }
+
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Tutorial Interactivo: Estructura, Layout y Alineación en HTML y CSS</h1>
+    <p>¡Bienvenido Oscar! En este tutorial mejorado, no solo aprenderás a estructurar y organizar tu web con HTML semántico y CSS, sino que podrás <strong>experimentar en tiempo real</strong> con las potentes herramientas de layout como Flexbox y Grid. Veremos desde lo básico hasta conceptos más avanzados, con ejemplos interactivos.</p>
+
+    <h2>1. Estructura Básica de un Documento HTML</h2>
+    <p>Todo documento HTML necesita una estructura fundamental para que los navegadores lo interpreten correctamente. Incluye la declaración del tipo de documento, y las etiquetas <code>&lt;html&gt;</code>, <code>&lt;head&gt;</code> (con metadatos como el título y la codificación de caracteres) y <code>&lt;body&gt;</code> (donde va el contenido visible).</p>
+    <div class="code-block">
+&lt;!DOCTYPE html&gt;
+&lt;html lang="es"&gt;
+&lt;head&gt;
+  &lt;meta charset="UTF-8"&gt; &lt;!-- Codificación de caracteres --&gt;
+  &lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt; &lt;!-- Para diseño responsivo --&gt;
+  &lt;title&gt;Título de la Página&lt;/title&gt;
+  &lt;link rel="stylesheet" href="style.css"&gt; &lt;!-- Enlazar CSS externo (recomendado) --&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;h1&gt;Hola Mundo&lt;/h1&gt;
+  &lt;p&gt;Este es el contenido visible de tu página.&lt;/p&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+    </div>
+    <p><strong>Nota:</strong> La etiqueta <code>&lt;meta name="viewport" ...&gt;</code> es crucial para el diseño web responsivo, asegurando que la página se adapte a diferentes tamaños de pantalla.</p>
+
+    <h2>2. Uso de Etiquetas Semánticas para Estructurar</h2>
+    <p>HTML5 introdujo etiquetas que describen el *propósito* de su contenido, mejorando la accesibilidad (para lectores de pantalla) y el SEO. Son preferibles a usar solo <code>&lt;div&gt;</code> para todo.</p>
+    <ul>
+        <li><code>&lt;header&gt;</code>: Contiene la introducción o elementos de navegación (logo, título principal, menú). Puede haber varios en una página (uno principal, otros en artículos).</li>
+        <li><code>&lt;nav&gt;</code>: Define un bloque de enlaces de navegación principales.</li>
+        <li><code>&lt;main&gt;</code>: Representa el contenido principal y único del documento. Solo debe haber uno por página.</li>
+        <li><code>&lt;article&gt;</code>: Contenido independiente y autocontenido (un post de blog, un producto, un comentario).</li>
+        <li><code>&lt;section&gt;</code>: Agrupa contenido temáticamente relacionado. Generalmente incluye un encabezado (<code>&lt;h2&gt;</code> - <code>&lt;h6&gt;</code>).</li>
+        <li><code>&lt;aside&gt;</code>: Contenido relacionado tangencialmente con el contenido principal (barra lateral, anuncios, notas al margen).</li>
+        <li><code>&lt;footer&gt;</code>: Pie de página de un documento o sección (información de autor, copyright, enlaces relacionados).</li>
+    </ul>
+    <p><strong>Visualización de un Layout Semántico Básico:</strong></p>
+    <div class="example semantic-layout-example" id="semantic-layout-visual">
+        <header>
+            <h1>Logo & Título Principal</h1>
+        </header>
+        <nav>
+            <ul>
+                <li><a href="#">Inicio</a></li>
+                <li><a href="#">Servicios</a></li>
+                <li><a href="#">Blog</a></li>
+                <li><a href="#">Contacto</a></li>
+            </ul>
+        </nav>
+        <main>
+            <article>
+                <h2>Título del Artículo Principal</h2>
+                <p>Este es el contenido principal de la página, como un post de blog o la descripción de un servicio...</p>
+                <section>
+                    <h3>Subsección del Artículo</h3>
+                    <p>Detalles adicionales dentro del artículo.</p>
+                </section>
+            </article>
+            <aside>
+                <h4>Contenido Relacionado</h4>
+                <p>Enlaces, publicidad o información complementaria.</p>
+            </aside>
+        </main>
+        <footer>
+            <p>&copy; 2025 Mi Sitio Web - Información de contacto</p>
+        </footer>
+    </div>
+    <!-- NUEVO: Contenedor para mostrar el código del Layout Semántico -->
+    <div class="code-viewer">
+        <button class="toggle-code-btn" onclick="toggleCode(this, 'semantic-layout-code')">Mostrar Código HTML</button>
+        <div class="code-display" id="semantic-layout-code" style="display: none;">
+            <pre><code class="language-html">El código aparecerá aquí...</code></pre>
+        </div>
+    </div>
+
+
+    <h2>3. Entendiendo el CSS Box Model (Modelo de Caja)</h2>
+    <p>Cada elemento HTML en una página es tratado como una caja rectangular. El Box Model describe cómo se calculan el tamaño y el espacio de esta caja. Consiste en:</p>
+    <ul>
+        <li><strong>Content:</strong> El contenido real del elemento (texto, imagen).</li>
+        <li><strong>Padding:</strong> Espacio transparente *dentro* del borde, alrededor del contenido.</li>
+        <li><strong>Border:</strong> El borde que rodea al padding y al contenido.</li>
+        <li><strong>Margin:</strong> Espacio transparente *fuera* del borde, que separa el elemento de otros.</li>
+    </ul>
+    <p>La propiedad <code>box-sizing: border-box;</code> es muy útil, ya que hace que el <code>width</code> y <code>height</code> definidos incluyan el `padding` y el `border`, simplificando los cálculos de layout.</p>
+    <p><strong>Ejemplo Interactivo del Box Model:</strong></p>
+    <div class="example">
+        <div class="interactive-controls">
+            <div>
+                <label for="padding-control">Padding:</label>
+                <input type="number" id="padding-control" value="20" min="0" max="50" step="5"> px
+            </div>
+            <div>
+                <label for="margin-control">Margin:</label>
+                <input type="number" id="margin-control" value="10" min="0" max="50" step="5"> px
+            </div>
+             <div>
+                <label for="border-control">Border Width:</label>
+                <input type="number" id="border-control" value="5" min="0" max="20" step="1"> px
+            </div>
+        </div>
+        <div class="box-model-interactive">
+            <div class="box" id="box-model-target">Soy una caja</div>
+        </div>
+         <p>Observa cómo al cambiar los valores de padding, margin y border, el espacio alrededor y dentro de la caja (y potencialmente su tamaño total percibido) cambia.</p>
+    </div> <!-- Cierre de div.example -->
+    <!-- NUEVO: Contenedor para mostrar el código del Box Model -->
+    <div class="code-viewer">
+        <button class="toggle-code-btn" onclick="toggleCode(this, 'box-model-code')">Mostrar Código HTML/CSS</button>
+        <div class="code-display" id="box-model-code" style="display: none;">
+            <pre><code class="language-html">El código aparecerá aquí...</code></pre>
+        </div>
+    </div>
+
+
+    <h2>4. Contenedores Genéricos: <code>&lt;div&gt;</code> y <code>&lt;span&gt;</code></h2>
+    <p>Cuando las etiquetas semánticas no encajan, usamos contenedores genéricos:</p>
+    <ul>
+        <li><code>&lt;div&gt;</code>: Elemento de bloque. Se usa para agrupar otros elementos y aplicarles estilos o estructura (ocupa todo el ancho disponible por defecto).</li>
+        <li><code>&lt;span&gt;</code>: Elemento en línea. Se usa para agrupar pequeñas partes de texto o elementos en línea dentro de un bloque, para aplicarles estilos específicos sin romper el flujo del texto.</li>
+    </ul>
+    <div class="code-block">
+&lt;div style="border: 1px solid #999; padding: 10px; margin-bottom: 10px;"&gt;
+  &lt;h3&gt;Título dentro de un Div&lt;/h3&gt;
+  &lt;p&gt;Este párrafo está agrupado. Podemos aplicar estilos a todo el div.&lt;/p&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Este es un texto normal, pero &lt;span style="color: red; font-weight: bold;"&gt;esta parte&lt;/span&gt; está envuelta en un span para resaltarla.&lt;/p&gt;
+    </div>
+    <div class="example" id="div-span-visual">
+        <div style="border: 1px solid #999; padding: 10px; margin-bottom: 10px;">
+             <h3>Título dentro de un Div</h3>
+             <p>Este párrafo está agrupado. Podemos aplicar estilos a todo el div.</p>
+        </div>
+        <p>Este es un texto normal, pero <span style="color: var(--accent-color); font-weight: bold;">esta parte</span> está envuelta en un span para resaltarla.</p>
+    </div>
+    <!-- NUEVO: Contenedor para mostrar el código del Div/Span -->
+    <div class="code-viewer">
+        <button class="toggle-code-btn" onclick="toggleCode(this, 'div-span-code')">Mostrar Código HTML</button>
+        <div class="code-display" id="div-span-code" style="display: none;">
+            <pre><code class="language-html">El código aparecerá aquí...</code></pre>
+        </div>
+    </div>
+
+    <h2>5. Layout Flexible con CSS Flexbox</h2>
+    <p>Flexbox es un modelo de layout unidimensional ideal para distribuir elementos en una fila o columna y alinearlos. Se activa aplicando <code>display: flex;</code> al contenedor padre.</p>
+
+    <h3>5.1. Alineación y Distribución Principal (<code>justify-content</code>, <code>align-items</code>, <code>flex-direction</code>)</h3>
+    <p>Controla cómo se distribuyen los ítems en el eje principal (<code>justify-content</code>) y cómo se alinean en el eje transversal (<code>align-items</code>). También puedes cambiar la dirección del eje principal con <code>flex-direction</code>.</p>
+    <p><strong>Ejemplo Interactivo de Alineación Flexbox:</strong></p>
+    <div class="example">
+        <div class="interactive-controls">
+            <div>
+                <label for="flex-direction-control">flex-direction:</label>
+                <select id="flex-direction-control">
+                    <option value="row">row (default)</option>
+                    <option value="row-reverse">row-reverse</option>
+                    <option value="column">column</option>
+                    <option value="column-reverse">column-reverse</option>
+                </select>
+            </div>
+             <div>
+                <label for="justify-content-control">justify-content:</label>
+                <select id="justify-content-control">
+                    <option value="flex-start">flex-start (default)</option>
+                    <option value="flex-end">flex-end</option>
+                    <option value="center">center</option>
+                    <option value="space-between">space-between</option>
+                    <option value="space-around">space-around</option>
+                    <option value="space-evenly">space-evenly</option>
+                </select>
+            </div>
+             <div>
+                <label for="align-items-control">align-items:</label>
+                <select id="align-items-control">
+                    <option value="stretch">stretch (default)</option>
+                    <option value="flex-start">flex-start</option>
+                    <option value="flex-end">flex-end</option>
+                    <option value="center">center</option>
+                    <option value="baseline">baseline</option>
+                </select>
+            </div>
+             <div>
+                <label for="flex-wrap-control">flex-wrap:</label>
+                <select id="flex-wrap-control">
+                    <option value="nowrap">nowrap (default)</option>
+                    <option value="wrap">wrap</option>
+                    <option value="wrap-reverse">wrap-reverse</option>
+                </select>
+            </div>
+        </div>
+        <div>
+            <label for="item-size-control">Tamaño Ítems:</label>
+            <input type="range" id="item-size-control" min="50" max="300" value="150"> px
+        </div>        
+        <div class="flex-container-interactive" id="flex-alignment-target">
+            <div class="flex-item-interactive">Ítem 1</div>
+            <div class="flex-item-interactive" style="padding-top: 30px; padding-bottom: 5px;">Ítem 2<br>(más alto)</div>
+            <div class="flex-item-interactive">Ítem 3</div>
+            <div class="flex-item-interactive">Ítem 4</div>
+        </div>
+        <p>Prueba a cambiar las opciones para ver cómo se reorganizan los ítems. <code>justify-content</code> afecta al eje principal (horizontal en `row`, vertical en `column`) y <code>align-items</code> al eje secundario. `flex-wrap` controla si los ítems pasan a la siguiente línea.</p>
+    </div><!-- Cierre de div.example -->
+    <!-- NUEVO: Contenedor para mostrar el código de Flex Alignment -->
+    <div class="code-viewer">
+        <button class="toggle-code-btn" onclick="toggleCode(this, 'flex-align-code')">Mostrar Código HTML/CSS</button>
+        <div class="code-display" id="flex-align-code" style="display: none;">
+            <pre><code class="language-html">El código aparecerá aquí...</code></pre>
+        </div>
+    </div>
+
+    <h3>5.2. Tamaño Flexible de los Ítems (<code>flex-grow</code>, <code>flex-shrink</code>, <code>flex-basis</code>)</h3>
+    <p>Estas propiedades controlan cómo los ítems flexibles crecen o se encogen para llenar el espacio disponible.</p>
+    <ul>
+        <li><code>flex-grow</code>: Factor de crecimiento. Un valor > 0 permite al ítem crecer si hay espacio extra.</li>
+        <li><code>flex-shrink</code>: Factor de encogimiento. Un valor > 0 permite al ítem encogerse si no hay suficiente espacio.</li>
+        <li><code>flex-basis</code>: Tamaño inicial del ítem antes de distribuir el espacio sobrante/faltante.</li>
+    </ul>
+     <p><strong>Ejemplo Interactivo de Tamaño Flexible:</strong></p>
+     <div class="example">
+         <div class="interactive-controls">
+             <p style="margin: 0; flex-basis: 100%; font-size: 0.9em;">Aplica propiedades a ítems específicos:</p>
+             <button onclick="applyFlexSizing('item1', 'grow', 1)">Ítem 1: grow=1</button>
+             <button onclick="applyFlexSizing('item2', 'grow', 2)">Ítem 2: grow=2</button>
+             <button onclick="applyFlexSizing('item3', 'basis', 150)">Ítem 3: basis=150px</button>
+             <button onclick="resetFlexSizing()">Resetear Tamaños</button>
+         </div>
+         <div class="flex-container-interactive" id="flex-sizing-target" style="height: auto;"> <div class="flex-item-interactive" id="flex-item-1">Ítem 1</div>
+             <div class="flex-item-interactive" id="flex-item-2">Ítem 2</div>
+             <div class="flex-item-interactive" id="flex-item-3">Ítem 3</div>
+         </div>
+         <p>Observa cómo <code>flex-grow</code> permite a los ítems ocupar el espacio sobrante proporcionalmente. <code>flex-basis</code> establece un tamaño preferido.</p>
+     </div><!-- Cierre de div.example -->
+     <!-- NUEVO: Contenedor para mostrar el código de Flex Sizing -->
+     <div class="code-viewer">
+         <button class="toggle-code-btn" onclick="toggleCode(this, 'flex-size-code')">Mostrar Código HTML/CSS</button>
+         <div class="code-display" id="flex-size-code" style="display: none;">
+             <pre><code class="language-html">El código aparecerá aquí...</code></pre>
+         </div>
+     </div>
+
+
+    <h2>6. Layout Bidimensional con CSS Grid</h2>
+    <p>CSS Grid es un sistema de layout bidimensional (filas y columnas), ideal para crear estructuras de página complejas. Se activa con <code>display: grid;</code> en el contenedor.</p>
+
+    <h3>6.1. Definición de la Cuadrícula (<code>grid-template-columns</code>, <code>grid-template-rows</code>, <code>gap</code>)</h3>
+    <p>Define las columnas y filas de tu cuadrícula. Puedes usar unidades fijas (px), flexibles (fr - fracción de espacio disponible), porcentajes (%), etc. <code>gap</code> define el espacio entre celdas.</p>
+    <p><strong>Ejemplo Interactivo de Definición de Grid:</strong></p>
+    <div class="example">
+        <div class="interactive-controls">
+            <div>
+                <label for="grid-cols-control">grid-template-columns:</label>
+                <select id="grid-cols-control">
+                    <option value="repeat(3, 1fr)">repeat(3, 1fr) (default)</option>
+                    <option value="1fr 2fr 1fr">1fr 2fr 1fr</option>
+                    <option value="100px auto 100px">100px auto 100px</option>
+                    <option value="repeat(auto-fit, minmax(100px, 1fr))">repeat(auto-fit, minmax(100px, 1fr)) (Responsivo)</option>
+                </select>
+            </div>
+             <div>
+                <label for="grid-rows-control">grid-template-rows:</label>
+                 <select id="grid-rows-control">
+                    <option value="auto">auto (default)</option>
+                    <option value="100px 150px">100px 150px</option>
+                    <option value="repeat(2, minmax(80px, auto))">repeat(2, minmax(80px, auto))</option>
+                </select>
+            </div>
+            <div>
+                <label for="grid-gap-control">gap:</label>
+                <input type="number" id="grid-gap-control" value="10" min="0" max="50" step="5"> px
+            </div>
+        </div>
+        <div class="grid-container-interactive" id="grid-definition-target">
+            <div class="grid-item-interactive">1</div>
+            <div class="grid-item-interactive">2</div>
+            <div class="grid-item-interactive">3</div>
+            <div class="grid-item-interactive">4</div>
+            <div class="grid-item-interactive">5</div>
+            <div class="grid-item-interactive">6</div>
+        </div>
+         <p>Cambia las plantillas de columnas/filas y el espaciado (gap) para ver cómo se reestructura la cuadrícula. La unidad <code>fr</code> es muy potente para la flexibilidad.</p>
+    </div><!-- Cierre de div.example -->
+    <!-- NUEVO: Contenedor para mostrar el código de Grid Definition -->
+    <div class="code-viewer">
+        <button class="toggle-code-btn" onclick="toggleCode(this, 'grid-def-code')">Mostrar Código HTML/CSS</button>
+        <div class="code-display" id="grid-def-code" style="display: none;">
+            <pre><code class="language-html">El código aparecerá aquí...</code></pre>
+        </div>
+    </div>
+
+    <h3>6.2. Alineación de Ítems en la Cuadrícula (<code>justify-items</code>, <code>align-items</code>)</h3>
+    <p>Controlan cómo se alinean *todos* los ítems dentro de sus celdas de la cuadrícula.</p>
+    <ul>
+        <li><code>justify-items</code>: Alineación horizontal (a lo largo de la fila).</li>
+        <li><code>align-items</code>: Alineación vertical (a lo largo de la columna).</li>
+    </ul>
+     <p><strong>Ejemplo Interactivo de Alineación de Ítems Grid:</strong></p>
+    <div class="example">
+        <div class="interactive-controls">
+            <div>
+                <label for="justify-items-control">justify-items:</label>
+                <select id="justify-items-control">
+                    <option value="stretch">stretch (default)</option>
+                    <option value="start">start</option>
+                    <option value="end">end</option>
+                    <option value="center">center</option>
+                </select>
+            </div>
+            <div>
+                <label for="align-items-control-grid">align-items:</label> <select id="align-items-control-grid">
+                     <option value="stretch">stretch (default)</option>
+                    <option value="start">start</option>
+                    <option value="end">end</option>
+                    <option value="center">center</option>
+                    <option value="baseline">baseline</option> </select>
+            </div>
+        </div>
+        <div class="grid-container-interactive" id="grid-alignment-target" style="grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 100px);"> <div class="grid-item-interactive">A</div>
+            <div class="grid-item-interactive" style="font-size: 1.5em;">B</div> <div class="grid-item-interactive">C</div>
+            <div class="grid-item-interactive">D</div>
+            <div class="grid-item-interactive">E</div>
+            <div class="grid-item-interactive">F</div>
+        </div>
+        <p>Observa cómo <code>justify-items</code> y <code>align-items</code> cambian la posición del contenido *dentro* de cada celda de la cuadrícula.</p>
+         <p><strong>Nota:</strong> También existen <code>justify-self</code> y <code>align-self</code> para alinear ítems individuales de forma diferente al resto.</p>
+    </div><!-- Cierre de div.example -->
+    <!-- NUEVO: Contenedor para mostrar el código de Grid Alignment -->
+    <div class="code-viewer">
+        <button class="toggle-code-btn" onclick="toggleCode(this, 'grid-align-code')">Mostrar Código HTML/CSS</button>
+        <div class="code-display" id="grid-align-code" style="display: none;">
+            <pre><code class="language-html">El código aparecerá aquí...</code></pre>
+        </div>
+    </div>
+
+     <h3>6.3. Posicionamiento y Expansión de Ítems (<code>grid-column</code>, <code>grid-row</code>, <code>grid-area</code>)</h3>
+    <p>Puedes hacer que un ítem ocupe múltiples celdas o asignarle un nombre de área específico.</p>
+    <ul>
+        <li><code>grid-column: start / end;</code> o <code>grid-column: span N;</code></li>
+        <li><code>grid-row: start / end;</code> o <code>grid-row: span N;</code></li>
+        <li><code>grid-template-areas</code>: Define nombres para áreas en el contenedor, y luego asignas ítems a esas áreas con <code>grid-area: nombre;</code></li>
+    </ul>
+     <p><strong>Ejemplo de Expansión y Áreas:</strong></p>
+    <div class="example">
+        <h4>Expansión con span:</h4>
+        <div class="grid-container-interactive" id="grid-span-visual" style="grid-template-columns: repeat(4, 1fr); grid-template-rows: auto; min-height: auto;">
+            <div class="grid-item-interactive span-col-2">Ocupa 2 columnas</div>
+            <div class="grid-item-interactive">Normal</div>
+            <div class="grid-item-interactive">Normal</div>
+            <div class="grid-item-interactive">Normal</div>
+            <div class="grid-item-interactive span-row-2" style="writing-mode: vertical-lr;">Ocupa 2 filas</div>
+            <div class="grid-item-interactive">Normal</div>
+            <div class="grid-item-interactive">Normal</div>
+            <div class="grid-item-interactive">Normal</div>
+        </div>
+         <!-- NUEVO: Contenedor para mostrar el código de Grid Spanning -->
+         <div class="code-viewer" style="margin-top: 15px;"> <!-- Añadido margen superior -->
+             <button class="toggle-code-btn" onclick="toggleCode(this, 'grid-span-code')">Mostrar Código HTML/CSS (Span)</button>
+             <div class="code-display" id="grid-span-code" style="display: none;">
+                 <pre><code class="language-html">El código aparecerá aquí...</code></pre>
+             </div>
+         </div>
+
+        <h4 style="margin-top: 20px;">Uso de <code>grid-template-areas</code>:</h4>
+         <div class="code-block">
+/* CSS en el contenedor */
+.grid-container-areas {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: auto auto;
+  gap: 10px;
+  grid-template-areas:
+    "header header header"
+    "sidebar main main";
+}
+/* CSS en los ítems */
+.item-header { grid-area: header; }
+.item-sidebar { grid-area: sidebar; }
+.item-main { grid-area: main; }
+        </div>
+         <div class="grid-container-interactive" id="grid-areas-visual" style="grid-template-areas: 'A A A' 'B C C'; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: auto auto; min-height: auto;">
+            <div class="grid-item-interactive area-A">Área A (Header)</div>
+            <div class="grid-item-interactive area-B">Área B (Sidebar)</div>
+            <div class="grid-item-interactive area-C">Área C (Main)</div>
+        </div>
+         <p><code>grid-template-areas</code> ofrece una forma muy visual de definir layouts complejos.</p>
+         <!-- NUEVO: Contenedor para mostrar el código de Grid Areas -->
+         <div class="code-viewer">
+             <button class="toggle-code-btn" onclick="toggleCode(this, 'grid-areas-code')">Mostrar Código HTML/CSS (Areas)</button>
+             <div class="code-display" id="grid-areas-code" style="display: none;">
+                 <pre><code class="language-html">El código aparecerá aquí...</code></pre>
+             </div>
+         </div>
+    </div> <!-- Cierre de div.example para Grid Spanning/Areas -->
+
+
+    <h2>7. Organización de Formularios</h2>
+    <p>Los formularios son esenciales para la interacción. Es crucial usar <code>&lt;label&gt;</code> y asociarlo correctamente con su <code>&lt;input&gt;</code> (u otros controles como <code>&lt;select&gt;</code>, <code>&lt;textarea&gt;</code>) mediante el atributo <code>for</code> que coincide con el <code>id</code> del control. Esto mejora la accesibilidad y usabilidad.</p>
+    <div class="code-block">
+&lt;form action="/procesar-datos" method="post"&gt;
+  &lt;div&gt;
+    &lt;label for="nombre"&gt;Nombre:&lt;/label&gt;
+    &lt;input type="text" id="nombre" name="usuario_nombre" required&gt;
+  &lt;/div&gt;
+  &lt;div&gt;
+    &lt;label for="email"&gt;Email:&lt;/label&gt;
+    &lt;input type="email" id="email" name="usuario_email" required&gt;
+  &lt;/div&gt;
+  &lt;div&gt;
+    &lt;label for="mensaje"&gt;Mensaje:&lt;/label&gt;
+    &lt;textarea id="mensaje" name="usuario_mensaje" rows="4"&gt;&lt;/textarea&gt;
+  &lt;/div&gt;
+  &lt;div&gt;
+    &lt;input type="submit" value="Enviar Consulta"&gt;
+  &lt;/div&gt;
+&lt;/form&gt;
+    </div>
+    <p><strong>Visualización del Formulario Mejorado:</strong></p>
+    <div class="example form-example">
+        <form id="form-visual" action="#" method="post" onsubmit="alert('Formulario enviado (simulación)'); return false;">
+            <div>
+                <label for="frm-nombre">Nombre:</label>
+                <input type="text" id="frm-nombre" name="nombre" required placeholder="Escribe tu nombre">
+            </div>
+            <div>
+                <label for="frm-email">Email:</label>
+                <input type="email" id="frm-email" name="email" required placeholder="tu@correo.com">
+            </div>
+             <div>
+                <label for="frm-asunto">Asunto:</label>
+                 <select id="frm-asunto" name="asunto">
+                     <option value="consulta">Consulta General</option>
+                     <option value="soporte">Soporte Técnico</option>
+                     <option value="ventas">Ventas</option>
+                 </select>
+            </div>
+            <div>
+                <label for="frm-mensaje">Mensaje:</label>
+                <textarea id="frm-mensaje" name="mensaje" rows="4" placeholder="Escribe tu mensaje aquí..."></textarea>
+            </div>
+            <div>
+                <input type="submit" value="Enviar Mensaje">
+            </div>
+        </form>
+    </div><!-- Cierre de div.example -->
+     <!-- NUEVO: Contenedor para mostrar el código del Formulario -->
+    <div class="code-viewer">
+        <button class="toggle-code-btn" onclick="toggleCode(this, 'form-code')">Mostrar Código HTML</button>
+        <div class="code-display" id="form-code" style="display: none;">
+            <pre><code class="language-html">El código aparecerá aquí...</code></pre>
+        </div>
+    </div>
+
+    <h2>8. Diseño Responsivo con Media Queries</h2>
+    <p>El diseño responsivo asegura que tu web se vea bien en todos los dispositivos (móviles, tablets, ordenadores). La etiqueta <code>&lt;meta name="viewport"...&gt;</code> (vista en la sección 1) es el primer paso. El segundo es usar <strong>Media Queries</strong> en CSS.</p>
+    <p>Las Media Queries permiten aplicar estilos CSS diferentes según características del dispositivo, como el ancho de la pantalla.</p>
+    <div class="code-block">
+/* Estilos base (para móviles primero es una buena práctica) */
+.columna-responsiva {
+  width: 100%;
+  background-color: var(--secondary-color);
+  padding: 10px;
+  margin-bottom: 10px;
+  color: white;
+  border-radius: 4px;
+}
+
+/* Estilos para pantallas más grandes (ej. tablets y superiores) */
+@media (min-width: 768px) {
+  .contenedor-responsivo {
+    display: flex; /* Usar Flexbox en pantallas grandes */
+    gap: 10px;
+  }
+  .columna-responsiva {
+     flex: 1; /* Reemplaza width: 33%; para mejor distribución */
+     margin-bottom: 0; /* Quitar margen inferior ya que están en flex */
+  }
+}
+    </div>
+     <p><strong>Ejemplo Responsivo:</strong> Redimensiona la ventana de tu navegador para ver el cambio.</p>
+    <div class="example">
+        <div class="contenedor-responsivo" id="responsive-visual">
+            <div class="columna-responsiva">Columna 1</div>
+            <div class="columna-responsiva">Columna 2</div>
+            <div class="columna-responsiva">Columna 3</div>
+        </div>
+        <p style="margin-top: 15px;">En pantallas pequeñas (menos de 768px de ancho), las columnas ocupan el 100% del ancho y se apilan. En pantallas más grandes, se colocan una al lado de la otra usando Flexbox.</p>
+    </div><!-- Cierre de div.example -->
+    <!-- NUEVO: Contenedor para mostrar el código Responsivo -->
+    <div class="code-viewer">
+        <button class="toggle-code-btn" onclick="toggleCode(this, 'responsive-code')">Mostrar Código HTML/CSS</button>
+        <div class="code-display" id="responsive-code" style="display: none;">
+            <pre><code class="language-html">El código aparecerá aquí...</code></pre>
+        </div>
+    </div>
+
+    <h2>Conclusión</h2>
+    <p>¡Felicidades, Oscar! Has recorrido un camino completo desde la estructura básica de HTML y el significado de las etiquetas semánticas, hasta el poder del Box Model y las técnicas de layout avanzadas y flexibles con Flexbox y Grid. Ahora también entiendes la importancia de los formularios bien estructurados y cómo empezar a hacer tus diseños responsivos.</p>
+    <p>La clave está en practicar y experimentar. Usa estos ejemplos interactivos para afianzar los conceptos. ¡Sigue explorando y construyendo!</p>
+
+</div>
+
+<script>
+    // --- Obtención de elementos (mejor al inicio) ---
+    // Box Model
+    const paddingControl = document.getElementById('padding-control');
+    const marginControl = document.getElementById('margin-control');
+    const borderControl = document.getElementById('border-control');
+    const boxModelTarget = document.getElementById('box-model-target');
+
+    // Flex Alignment
+    const flexDirectionControl = document.getElementById('flex-direction-control');
+    const justifyContentControl = document.getElementById('justify-content-control');
+    const alignItemsControl = document.getElementById('align-items-control');
+    const flexWrapControl = document.getElementById('flex-wrap-control');
+    const flexAlignmentTarget = document.getElementById('flex-alignment-target');
+    
+    // Control de tamaño dinámico de ítems
+    const itemSizeControl = document.getElementById('item-size-control');
+    if (itemSizeControl) {
+    itemSizeControl.addEventListener('input', () => {
+        document.querySelectorAll('#flex-alignment-target .flex-item-interactive').forEach(item => {
+        item.style.width = `${itemSizeControl.value}px`;
+        });
+        if (document.getElementById('flex-align-code')?.style.display !== 'none') {
+        updateFlexAlignmentCode();
+        }
+    });
+    }
+
+    // Flex Sizing
+    const flexItem1 = document.getElementById('flex-item-1');
+    const flexItem2 = document.getElementById('flex-item-2');
+    const flexItem3 = document.getElementById('flex-item-3');
+    const flexSizingTarget = document.getElementById('flex-sizing-target'); // Necesario para el código
+
+    // Grid Definition
+    const gridColsControl = document.getElementById('grid-cols-control');
+    const gridRowsControl = document.getElementById('grid-rows-control');
+    const gridGapControl = document.getElementById('grid-gap-control');
+    const gridDefinitionTarget = document.getElementById('grid-definition-target');
+
+    // Grid Alignment
+    const justifyItemsControl = document.getElementById('justify-items-control');
+    const alignItemsControlGrid = document.getElementById('align-items-control-grid');
+    const gridAlignmentTarget = document.getElementById('grid-alignment-target');
+
+    // Elementos para código estático
+    const semanticLayoutVisual = document.getElementById('semantic-layout-visual');
+    const divSpanVisual = document.getElementById('div-span-visual');
+    const gridSpanVisual = document.getElementById('grid-span-visual');
+    const gridAreasVisual = document.getElementById('grid-areas-visual');
+    const formVisual = document.getElementById('form-visual');
+    const responsiveVisual = document.getElementById('responsive-visual');
+
+
+    // --- Función para Mostrar/Ocultar Código ---
+    function toggleCode(button, codeId) {
+        const codeDisplay = document.getElementById(codeId);
+        if (codeDisplay) {
+            const isHidden = codeDisplay.style.display === 'none';
+            if (isHidden) {
+                // Llama a la función de actualización específica ANTES de mostrar
+                switch(codeId) {
+                    case 'semantic-layout-code': updateSemanticLayoutCode(); break;
+                    case 'box-model-code': updateBoxModelCode(); break;
+                    case 'div-span-code': updateDivSpanCode(); break;
+                    case 'flex-align-code': updateFlexAlignmentCode(); break;
+                    case 'flex-size-code': updateFlexSizingCode(); break;
+                    case 'grid-def-code': updateGridDefinitionCode(); break;
+                    case 'grid-align-code': updateGridAlignmentCode(); break;
+                    case 'grid-span-code': updateGridSpanCode(); break;
+                    case 'grid-areas-code': updateGridAreasCode(); break;
+                    case 'form-code': updateFormCode(); break;
+                    case 'responsive-code': updateResponsiveCode(); break;
+                }
+                codeDisplay.style.display = 'block';
+                button.textContent = button.textContent.replace('Mostrar', 'Ocultar');
+            } else {
+                codeDisplay.style.display = 'none';
+                 button.textContent = button.textContent.replace('Ocultar', 'Mostrar');
+            }
+        }
+    }
+
+    // --- Funciones para Actualizar el Contenido del Código ---
+
+    function escapeHtml(unsafe) {
+        if (!unsafe) return '';
+        return unsafe
+             .replace(/&/g, "&amp;")
+             .replace(/</g, "&lt;")
+             .replace(/>/g, "&gt;")
+             .replace(/"/g, "&quot;")
+             .replace(/'/g, "&#039;");
+    }
+
+    function formatHtml(htmlString) {
+        // Simple formatter (basic indentation) - could be improved
+        let indentLevel = 0;
+        const lines = htmlString.split('\n');
+        let formatted = '';
+        const indentSize = 2; // spaces
+
+        lines.forEach(line => {
+            const trimmedLine = line.trim();
+            if (!trimmedLine) return; // Skip empty lines
+
+            if (trimmedLine.startsWith('</') && !trimmedLine.startsWith('</option>')) { // Closing tag (except self-closing like option sometimes)
+                 indentLevel = Math.max(0, indentLevel - 1);
+            }
+
+            formatted += ' '.repeat(indentLevel * indentSize) + trimmedLine + '\n';
+
+             // Increase indent for tags that aren't self-closing or comment
+            if (trimmedLine.startsWith('<') && !trimmedLine.startsWith('</') && !trimmedLine.endsWith('/>') && !trimmedLine.startsWith('<!') && !trimmedLine.includes("<option")) {
+                 indentLevel++;
+            }
+              // Special case for option inside select to keep it readable
+             if(trimmedLine.startsWith('<select')) indentLevel++;
+             if(trimmedLine.startsWith('</select')) indentLevel = Math.max(0, indentLevel - 1);
+        });
+        return formatted.trim(); // Trim trailing newline
+    }
+
+    function updateSemanticLayoutCode() {
+        const codeElement = document.getElementById('semantic-layout-code')?.querySelector('code');
+        if (codeElement && semanticLayoutVisual) {
+            const rawHtml = semanticLayoutVisual.innerHTML;
+            // Remove the ::before content added by CSS as it's not real HTML
+            const cleanHtml = rawHtml.replace(/<header [^>]*>/, '<header>')
+                                    .replace(/<nav [^>]*>/, '<nav>')
+                                    .replace(/<main [^>]*>/, '<main>')
+                                    .replace(/<article [^>]*>/, '<article>')
+                                    .replace(/<section [^>]*>/, '<section>')
+                                    .replace(/<aside [^>]*>/, '<aside>')
+                                    .replace(/<footer [^>]*>/, '<footer>');
+            codeElement.textContent = formatHtml(cleanHtml);
+        }
+    }
+
+
+    function updateBoxModelCode() {
+        const codeElement = document.getElementById('box-model-code')?.querySelector('code');
+        if (codeElement && boxModelTarget && paddingControl && marginControl && borderControl) {
+            const padding = paddingControl.value;
+            const margin = marginControl.value;
+            const border = borderControl.value;
+            const styles = `padding: ${padding}px; margin: ${margin}px; border-width: ${border}px; /* + otros estilos .box */`;
+            const fullStyles = `padding: ${padding}px;\n  margin: ${margin}px;\n  border: ${border}px solid var(--primary-color);\n  width: 150px;\n  box-sizing: border-box;\n  background-color: var(--secondary-color);\n  color: white;\n  text-align: center;`;
+
+
+            codeElement.textContent = `<!-- HTML -->
+<div class="box-model-interactive">
+  <div class="box" id="box-model-target" style="${escapeHtml(fullStyles)}">
+    Soy una caja
+  </div>
+</div>
+
+/* CSS Aplicado Dinámicamente (inline) */
+#box-model-target {
+  padding: ${padding}px;
+  margin: ${margin}px;
+  border-width: ${border}px;
+  /* ... más estilos base de la clase .box ... */
+}`;
+        }
+    }
+
+     function updateDivSpanCode() {
+        const codeElement = document.getElementById('div-span-code')?.querySelector('code');
+        if (codeElement && divSpanVisual) {
+             codeElement.textContent = formatHtml(divSpanVisual.innerHTML);
+        }
+    }
+
+
+    function updateFlexAlignmentCode() {
+        const codeElement = document.getElementById('flex-align-code')?.querySelector('code');
+        if (codeElement && flexAlignmentTarget && flexDirectionControl && justifyContentControl && alignItemsControl && flexWrapControl) {
+            const direction = flexDirectionControl.value;
+            const justify = justifyContentControl.value;
+            const align = alignItemsControl.value;
+            const wrap = flexWrapControl.value;
+            const containerStyles = `display: flex; flex-direction: ${direction}; justify-content: ${justify}; align-items: ${align}; flex-wrap: ${wrap}; /* + base */`;
+            const fullContainerStyles = `display: flex;\n  flex-direction: ${direction};\n  justify-content: ${justify};\n  align-items: ${align};\n  flex-wrap: ${wrap};\n  min-height: 150px;\n  background-color: #f1f3f5;\n  border: 2px dashed var(--primary-color);\n  padding: 10px;`;
+
+
+            let itemsHTML = '';
+            flexAlignmentTarget.querySelectorAll('.flex-item-interactive').forEach((item) => {
+                 // Get only the direct text content and BR, ignore potential complex HTML inside for simplicity
+                 const itemContent = (item.innerText || item.textContent || '').replace('\n', '<br>');
+                 const itemStyle = item.getAttribute('style') || '';
+                 itemsHTML += `  <div class="flex-item-interactive" ${itemStyle ? 'style="'+escapeHtml(itemStyle)+'"' : ''}>${itemContent}</div>\n`;
+            });
+
+
+            codeElement.textContent = `<!-- HTML -->
+<div class="flex-container-interactive" id="flex-alignment-target" style="${escapeHtml(fullContainerStyles)}">
+${itemsHTML.trimEnd()}
+</div>
+
+/* CSS Aplicado Dinámicamente al Contenedor */
+#flex-alignment-target {
+  display: flex;
+  flex-direction: ${direction};
+  justify-content: ${justify};
+  align-items: ${align};
+  flex-wrap: ${wrap};
+  /* ... más estilos base ... */
+}
+
+/* Estilos base de los items (.flex-item-interactive) no mostrados aquí */`;
+        }
+    }
+
+    function updateFlexSizingCode() {
+        const codeElement = document.getElementById('flex-size-code')?.querySelector('code');
+        if (codeElement && flexSizingTarget && flexItem1 && flexItem2 && flexItem3) {
+            const style1 = flexItem1.getAttribute('style') || '';
+            const style2 = flexItem2.getAttribute('style') || '';
+            const style3 = flexItem3.getAttribute('style') || '';
+            const containerStyle = flexSizingTarget.getAttribute('style') || '';
+
+            codeElement.textContent = `<!-- HTML -->
+<div class="flex-container-interactive" id="flex-sizing-target" ${containerStyle ? 'style="'+escapeHtml(containerStyle)+'"' : ''}>
+  <div class="flex-item-interactive" id="flex-item-1" ${style1 ? 'style="'+escapeHtml(style1)+'"' : ''}>Ítem 1</div>
+  <div class="flex-item-interactive" id="flex-item-2" ${style2 ? 'style="'+escapeHtml(style2)+'"' : ''}>Ítem 2</div>
+  <div class="flex-item-interactive" id="flex-item-3" ${style3 ? 'style="'+escapeHtml(style3)+'"' : ''}>Ítem 3</div>
+</div>
+
+/* CSS Aplicado Dinámicamente a los Items (inline) */
+/* (Solo se muestran los estilos aplicados por los botones) */
+
+#flex-item-1 { ${style1 ? `\n  ${escapeHtml(style1.replace(/;/g, ';\n  '))}`.trim() : ''} }
+#flex-item-2 { ${style2 ? `\n  ${escapeHtml(style2.replace(/;/g, ';\n  '))}`.trim() : ''} }
+#flex-item-3 { ${style3 ? `\n  ${escapeHtml(style3.replace(/;/g, ';\n  '))}`.trim() : ''} }
+
+/* Estilos base de .flex-item-interactive no mostrados aquí */`;
+        }
+    }
+
+
+    function updateGridDefinitionCode() {
+        const codeElement = document.getElementById('grid-def-code')?.querySelector('code');
+        if (codeElement && gridDefinitionTarget && gridColsControl && gridRowsControl && gridGapControl) {
+            const cols = gridColsControl.value;
+            const rows = gridRowsControl.value;
+            const gap = gridGapControl.value;
+            const containerStyles = `display: grid; grid-template-columns: ${cols}; grid-template-rows: ${rows}; gap: ${gap}px; /* + base */`;
+            const fullContainerStyles = `display: grid;\n  grid-template-columns: ${escapeHtml(cols)};\n  grid-template-rows: ${escapeHtml(rows)};\n  gap: ${gap}px;\n  min-height: 200px;\n  background-color: #f1f3f5;\n  border: 2px dashed var(--accent-color);\n  padding: 10px;`;
+
+
+            let itemsHTML = '';
+            gridDefinitionTarget.querySelectorAll('.grid-item-interactive').forEach((item, index) => {
+                 itemsHTML += `  <div class="grid-item-interactive">${index + 1}</div>\n`;
+            });
+
+            codeElement.textContent = `<!-- HTML -->
+<div class="grid-container-interactive" id="grid-definition-target" style="${escapeHtml(fullContainerStyles)}">
+${itemsHTML.trimEnd()}
+</div>
+
+/* CSS Aplicado Dinámicamente al Contenedor */
+#grid-definition-target {
+  display: grid;
+  grid-template-columns: ${escapeHtml(cols)};
+  grid-template-rows: ${escapeHtml(rows)};
+  gap: ${gap}px;
+  /* ... más estilos base ... */
+}
+
+/* Estilos base de los items (.grid-item-interactive) no mostrados aquí */`;
+        }
+    }
+
+    function updateGridAlignmentCode() {
+         const codeElement = document.getElementById('grid-align-code')?.querySelector('code');
+        if (codeElement && gridAlignmentTarget && justifyItemsControl && alignItemsControlGrid) {
+            const justify = justifyItemsControl.value;
+            const align = alignItemsControlGrid.value;
+            const currentCols = gridAlignmentTarget.style.gridTemplateColumns || 'repeat(3, 1fr)';
+            const currentRows = gridAlignmentTarget.style.gridTemplateRows || 'repeat(2, 100px)';
+
+            const containerStyles = `display: grid; grid-template-columns: ${currentCols}; grid-template-rows: ${currentRows}; justify-items: ${justify}; align-items: ${align}; /* + base */`;
+            const fullContainerStyles = `display: grid;\n  grid-template-columns: ${escapeHtml(currentCols)};\n  grid-template-rows: ${escapeHtml(currentRows)};\n  justify-items: ${justify};\n  align-items: ${align};\n background-color: #f1f3f5;\n border: 2px dashed var(--accent-color);\n padding: 10px;`;
+
+            let itemsHTML = '';
+             gridAlignmentTarget.querySelectorAll('.grid-item-interactive').forEach((item) => {
+                  const itemStyle = item.getAttribute('style') || '';
+                  const itemClass = item.getAttribute('class') || 'grid-item-interactive';
+                 itemsHTML += `  <div class="${escapeHtml(itemClass)}" ${itemStyle ? 'style="'+escapeHtml(itemStyle)+'"' : ''}>${item.textContent}</div>\n`;
+            });
+
+            codeElement.textContent = `<!-- HTML -->
+<div class="grid-container-interactive" id="grid-alignment-target" style="${escapeHtml(fullContainerStyles)}">
+${itemsHTML.trimEnd()}
+</div>
+
+/* CSS Aplicado Dinámicamente al Contenedor */
+#grid-alignment-target {
+  display: grid;
+  grid-template-columns: ${escapeHtml(currentCols)};
+  grid-template-rows: ${escapeHtml(currentRows)};
+  justify-items: ${justify};
+  align-items: ${align};
+  /* ... más estilos base ... */
+}
+
+/* Estilos base/inline de los items (.grid-item-interactive) no mostrados aquí */`;
+        }
+    }
+
+    function updateGridSpanCode() {
+        const codeElement = document.getElementById('grid-span-code')?.querySelector('code');
+        if(codeElement && gridSpanVisual) {
+            const containerStyle = gridSpanVisual.getAttribute('style') || '';
+            let itemsHtml = '';
+            gridSpanVisual.querySelectorAll('.grid-item-interactive').forEach(item => {
+                 const itemClass = item.getAttribute('class') || 'grid-item-interactive';
+                 const itemStyle = item.getAttribute('style') || '';
+                 itemsHtml += `  <div class="${escapeHtml(itemClass)}" ${itemStyle ? 'style="'+escapeHtml(itemStyle)+'"' : ''}>${item.textContent}</div>\n`;
+            });
+
+            codeElement.textContent = `<!-- HTML -->
+<div class="grid-container-interactive" style="${escapeHtml(containerStyle)}">
+${itemsHtml.trimEnd()}
+</div>
+
+/* CSS Relevante (Clases en los ítems) */
+.span-col-2 { grid-column: span 2; }
+.span-row-2 { grid-row: span 2; }
+/* Y estilos base de .grid-item-interactive, .grid-container-interactive */`;
+        }
+    }
+
+     function updateGridAreasCode() {
+        const codeElement = document.getElementById('grid-areas-code')?.querySelector('code');
+         if(codeElement && gridAreasVisual) {
+            const containerStyle = gridAreasVisual.getAttribute('style') || '';
+            let itemsHtml = '';
+            gridAreasVisual.querySelectorAll('.grid-item-interactive').forEach(item => {
+                 const itemClass = item.getAttribute('class') || 'grid-item-interactive';
+                 const itemStyle = item.getAttribute('style') || ''; // Aunque no hay inline en el ejemplo
+                 itemsHtml += `  <div class="${escapeHtml(itemClass)}" ${itemStyle ? 'style="'+escapeHtml(itemStyle)+'"' : ''}>${item.textContent}</div>\n`;
+            });
+
+             codeElement.textContent = `<!-- HTML -->
+<div class="grid-container-interactive" style="${escapeHtml(containerStyle)}">
+${itemsHtml.trimEnd()}
+</div>
+
+/* CSS Relevante */
+
+/* En el Contenedor: */
+#grid-areas-visual { /* o la clase que le apliques */
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr; /* o lo que corresponda */
+  grid-template-rows: auto auto;     /* o lo que corresponda */
+  gap: 10px;                        /* o lo que corresponda */
+  grid-template-areas:
+    "A A A"
+    "B C C";
+  /* ...más estilos base */
+}
+
+/* En los Ítems: */
+.area-A { grid-area: A; /* + estilos visuales */ }
+.area-B { grid-area: B; /* + estilos visuales */ }
+.area-C { grid-area: C; /* + estilos visuales */ }
+`;
+        }
+    }
+
+
+    function updateFormCode() {
+        const codeElement = document.getElementById('form-code')?.querySelector('code');
+        if (codeElement && formVisual) {
+            codeElement.textContent = `<!-- HTML del Formulario -->\n${formatHtml(formVisual.outerHTML)}\n\n/* Nota: El estilo del formulario se logra con CSS,\n   incluyendo reglas para .form-example label, input, select, textarea, etc. */`;
+        }
+    }
+
+    function updateResponsiveCode() {
+        const codeElement = document.getElementById('responsive-code')?.querySelector('code');
+        if (codeElement && responsiveVisual) {
+             codeElement.textContent = `<!-- HTML de las columnas -->
+<div class="contenedor-responsivo" id="responsive-visual">
+  <div class="columna-responsiva">Columna 1</div>
+  <div class="columna-responsiva">Columna 2</div>
+  <div class="columna-responsiva">Columna 3</div>
+</div>
+
+/* CSS Relevante (Simplificado) */
+
+/* Estilos Base (Móvil) */
+.columna-responsiva {
+  width: 100%;
+  /* ... otros estilos ... */
+}
+
+/* Estilos para pantallas > 768px */
+@media (min-width: 768px) {
+  .contenedor-responsivo {
+    display: flex;
+    gap: 10px;
+  }
+  .columna-responsiva {
+    flex: 1; /* Ocupa espacio flexible */
+    margin-bottom: 0;
+  }
+}`;
+        }
+    }
+
+
+    // --- Event Listeners y Funciones de Control ---
+
+    // Box Model
+    function updateBoxModel() {
+        if(boxModelTarget && paddingControl && marginControl && borderControl) {
+            boxModelTarget.style.padding = `${paddingControl.value}px`;
+            boxModelTarget.style.margin = `${marginControl.value}px`;
+            boxModelTarget.style.borderWidth = `${borderControl.value}px`;
+            if (document.getElementById('box-model-code')?.style.display !== 'none') {
+                 updateBoxModelCode(); // Actualizar si está visible
+            }
+        }
+    }
+    if(paddingControl && marginControl && borderControl) {
+        paddingControl.addEventListener('input', updateBoxModel);
+        marginControl.addEventListener('input', updateBoxModel);
+        borderControl.addEventListener('input', updateBoxModel);
+    }
+
+    // Flex Alignment
+    function updateFlexAlignment() {
+        if(flexAlignmentTarget && flexDirectionControl && justifyContentControl && alignItemsControl && flexWrapControl) {
+            flexAlignmentTarget.style.flexDirection = flexDirectionControl.value;
+            flexAlignmentTarget.style.justifyContent = justifyContentControl.value;
+            flexAlignmentTarget.style.alignItems = alignItemsControl.value;
+            flexAlignmentTarget.style.flexWrap = flexWrapControl.value;
+             if (document.getElementById('flex-align-code')?.style.display !== 'none') {
+                updateFlexAlignmentCode(); // Actualizar si está visible
+             }
+        }
+    }
+    if(flexDirectionControl && justifyContentControl && alignItemsControl && flexWrapControl) {
+        flexDirectionControl.addEventListener('change', updateFlexAlignment);
+        justifyContentControl.addEventListener('change', updateFlexAlignment);
+        alignItemsControl.addEventListener('change', updateFlexAlignment);
+        flexWrapControl.addEventListener('change', updateFlexAlignment);
+    }
+
+    // Flex Sizing
+     function applyFlexSizing(itemId, prop, value) {
+        const item = document.getElementById(`flex-${itemId}`);
+        if (!item) return;
+
+        if (prop === 'grow') {
+            item.style.flexShrink = '';
+            item.style.flexBasis = '';
+            item.style.flexGrow = value;
+        } else if (prop === 'basis') {
+             item.style.flexGrow = '0';
+             item.style.flexShrink = '1';
+            item.style.flexBasis = `${value}px`;
+        }
+         if (document.getElementById('flex-size-code')?.style.display !== 'none') {
+             updateFlexSizingCode(); // Actualizar si está visible
+         }
+    }
+
+    function resetFlexSizing() {
+         [flexItem1, flexItem2, flexItem3].forEach(item => {
+            if(item) {
+                item.style.flexGrow = '';
+                item.style.flexShrink = '';
+                item.style.flexBasis = '';
+            }
+         });
+          if (document.getElementById('flex-size-code')?.style.display !== 'none') {
+             updateFlexSizingCode(); // Actualizar si está visible
+          }
+    }
+
+    // Grid Definition
+     function updateGridDefinition() {
+        if(gridDefinitionTarget && gridColsControl && gridRowsControl && gridGapControl) {
+            gridDefinitionTarget.style.gridTemplateColumns = gridColsControl.value;
+            gridDefinitionTarget.style.gridTemplateRows = gridRowsControl.value;
+            gridDefinitionTarget.style.gap = `${gridGapControl.value}px`;
+             if (document.getElementById('grid-def-code')?.style.display !== 'none') {
+                 updateGridDefinitionCode(); // Actualizar si está visible
+             }
+        }
+    }
+    if(gridColsControl && gridRowsControl && gridGapControl) {
+        gridColsControl.addEventListener('change', updateGridDefinition);
+        gridRowsControl.addEventListener('change', updateGridDefinition);
+        gridGapControl.addEventListener('input', updateGridDefinition);
+    }
+
+    // Grid Alignment
+     function updateGridAlignment() {
+        if(gridAlignmentTarget && justifyItemsControl && alignItemsControlGrid) {
+            gridAlignmentTarget.style.justifyItems = justifyItemsControl.value;
+            gridAlignmentTarget.style.alignItems = alignItemsControlGrid.value;
+            if (document.getElementById('grid-align-code')?.style.display !== 'none') {
+                updateGridAlignmentCode(); // Actualizar si está visible
+            }
+        }
+    }
+    if(justifyItemsControl && alignItemsControlGrid) {
+        justifyItemsControl.addEventListener('change', updateGridAlignment);
+        alignItemsControlGrid.addEventListener('change', updateGridAlignment);
+    }
+
+
+    // --- Inicialización (Llamar una vez que el DOM está listo) ---
+    function initializeCodeViewers() {
+        // No es estrictamente necesario llamar a todas las update...Code aquí
+        // porque toggleCode las llamará la primera vez que se haga clic.
+        // Sin embargo, podríamos precargar las estáticas si quisiéramos.
+        // Por simplicidad, dejaremos que toggleCode haga el trabajo inicial.
+
+        // Aplicar valores iniciales a los ejemplos interactivos
+        updateBoxModel();
+        updateFlexAlignment();
+        // updateFlexSizingCode(); // Llamar para estado inicial del código de sizing
+        updateGridDefinition();
+        updateGridAlignment();
+    }
+
+    // Asegurarse de que el DOM está cargado antes de ejecutar el script
+    document.addEventListener('DOMContentLoaded', initializeCodeViewers);
+
+</script>
+
+</body>
+</html>

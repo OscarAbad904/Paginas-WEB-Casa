@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <title>Top Películas</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <style>
+    body {
+      margin: 0;
+      background: #111;
+      color: #f2f2f2;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+    /* Cabecera con logo y filtros */
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px;
+      background: #1e1e1e;
+    }
+    header img#logo {
+      width: 128px;
+      height: 128px;
+      object-fit: contain;
+    }
+    #controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      flex: 1;
+    }
+    #controls select,
+    #controls button {
+      padding: 6px 10px;
+      border-radius: 4px;
+      border: none;
+      font-size: 1rem;
+      background: #333;
+      color: #f2f2f2;
+      cursor: pointer;
+    }
+    #controls select:focus,
+    #controls button:focus {
+      outline: 2px solid #ffcc00;
+    }
+
+    .grid {
+      margin-top: 140px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 18px;
+      padding: 20px;
+      max-width: 1200px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .card {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: #1e1e1e;
+      border-radius: 12px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform .3s;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+    }
+    .card img {
+      width: 100%;
+      height: auto;
+      object-fit: cover;
+      display: block;
+    }
+    .card h3 {
+      margin: 6px 8px;
+      font-size: .9rem;
+      color: #ffcc00;
+      text-align: center;
+    }
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px;
+      background: #222;
+    }
+    .badge {
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: .7rem;
+      font-weight: bold;
+    }
+    .badge.info {
+      background: #00aaff;
+      color: #fff;
+    }
+    .badge.genre {
+      background: #00cc66;
+      color: #000;
+    }
+    .btn-trailer {
+      display: inline-block;
+      background: #e50914;
+      color: #fff;
+      border: none;
+      padding: 8px 12px;
+      font-size: 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 12px;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0; top: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,.85);
+      overflow: auto;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-content {
+      background: #1e1e1e;
+      border-radius: 14px;
+      display: flex;
+      flex-direction: row;
+      width: 90vw;
+      max-width: 1000px;
+      margin: 40px auto;
+      overflow: visible;
+    }
+    .modal-content img {
+      width: 100%;
+      max-width: 45%;
+      height: auto;
+      object-fit: cover;
+      border-top-right-radius: 14px;
+      border-bottom-right-radius: 14px;
+    }
+    .modal-content .text {
+      padding: 20px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .modal-content .text h2 {
+      margin-top: 0;
+      color: #ffcc00;
+    }
+    .modal-content .text p {
+      margin: 6px 0;
+      color: #f2f2f2;
+    }
+    .rating-text {
+      font-weight: bold;
+      font-size: .9rem;
+      color: #ffcc00;
+    }
+    .close {
+      position: absolute;
+      top: 12px; right: 18px;
+      font-size: 28px;
+      color: #ffcc00;
+      cursor: pointer;
+    }
+    @keyframes zoom {
+      from { opacity: 0; transform: scale(.92) }
+      to   { opacity: 1; transform: scale(1)   }
+    }
+    @media(max-width:700px) {
+      .modal-content {
+        flex-direction: column;
+        width: 95vw;
+        margin: 20px auto;
+      }
+      .modal-content img {
+        max-width: 100%;
+        border-radius: 14px 14px 0 0;
+      }
+    }
+    @media(prefers-color-scheme:light) {
+      body { background: #fafafa; color: #222 }
+      .card { background: #fff }
+      .modal-content { background: #fff }
+      .badge.info { color: #000 }
+      .badge.genre { color: #000 }
+      header { background: #ddd }
+      #controls select, #controls button { background: #fff; color: #000 }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <img id="logo" src="..\static\images\Claqueta_Top_Peliculas.png" alt="Top Películas"/>
+    <div id="controls">
+      <label>Género:
+        <select id="genre-select"><option value="">Todos</option></select>
+      </label>
+      <label>Desde año:
+        <select id="year-start"></select>
+      </label>
+      <label>Hasta año:
+        <select id="year-end"></select>
+      </label>
+      <button id="filter-btn">Filtrar</button>
+    </div>
+  </header>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <div class="text">
+        <h2 id="m-title"></h2>
+        <p id="m-rating" class="rating-text"></p>
+        <p id="m-count"  class="rating-text"></p>
+        <p id="m-genre"  class="rating-text"></p>
+        <p id="m-summary"></p>
+        <button id="m-trailer" class="btn-trailer">🎬 Ver tráiler</button>
+      </div>
+      <img id="m-img" alt="póster">
+      <span class="close" id="m-close">×</span>
+    </div>
+  </div>
+
+  <script>
+    const TMDB_API_KEY = "ed139291a16dd31fb61e98229b088188";
+    const BASE_URL = "https://api.themoviedb.org/3";
+    const placeholder = "https://via.placeholder.com/360x540/222/888?text=Sin+Póster";
+    let genreMap = {};
+
+    async function initControls() {
+      const respG = await fetch(`${BASE_URL}/genre/movie/list?api_key=${TMDB_API_KEY}&language=es-ES`);
+      const dataG = await respG.json();
+      const selG = document.getElementById('genre-select');
+      dataG.genres.forEach(g => {
+        genreMap[g.id] = g.name;
+        const opt = document.createElement('option');
+        opt.value = g.id; opt.textContent = g.name;
+        selG.append(opt);
+      });
+      const selStart = document.getElementById('year-start');
+      const selEnd   = document.getElementById('year-end');
+      const currentYear = new Date().getFullYear();
+      for (let y = currentYear; y >= 1980; y--) {
+        const o1 = document.createElement('option');
+        o1.value = y; o1.textContent = y; selStart.append(o1);
+        selEnd.append(o1.cloneNode(true));
+      }
+      document.getElementById('filter-btn').onclick = fetchAndDisplay;
+    }
+
+    async function fetchAndDisplay() {
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '';
+      const genreId   = document.getElementById('genre-select').value;
+      const yearStart = document.getElementById('year-start').value;
+      const yearEnd   = document.getElementById('year-end').value;
+      let films = [];
+      for (let page = 1; page <= 2; page++) {
+        let url = `${BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}` +
+                  `&sort_by=vote_average.desc&vote_count.gte=100&page=${page}&language=es-ES`;
+        if (genreId)   url += `&with_genres=${genreId}`;
+        if (yearStart) url += `&primary_release_date.gte=${yearStart}-01-01`;
+        if (yearEnd)   url += `&primary_release_date.lte=${yearEnd}-12-31`;
+        const data = await (await fetch(url)).json();
+        films.push(...data.results);
+      }
+      films.slice(0,40).forEach(createCard);
+    }
+
+    function createCard(film) {
+      const card = document.createElement('div');
+      card.className = 'card';
+
+      const img   = document.createElement('img');
+      img.src     = placeholder; img.alt = film.title;
+      if (film.poster_path) img.src = `https://image.tmdb.org/t/p/w500${film.poster_path}`;
+
+      const title = document.createElement('h3');
+      title.textContent = film.title;
+
+      const rating10 = (Math.round(film.vote_average * 10) / 10).toFixed(1);
+      const info = document.createElement('span');
+      info.className = 'badge info';
+      info.textContent = `👤 ${film.vote_count} · ${rating10}/10`;
+
+      const genres = film.genre_ids.map(id => genreMap[id]).filter(Boolean).join(', ');
+      const gspan = document.createElement('span');
+      gspan.className = 'badge genre';
+      gspan.textContent = genres;
+
+      const footer = document.createElement('div');
+      footer.className = 'card-footer';
+      footer.append(info, gspan);
+
+      card.append(img, title, footer);
+      card.onclick = () => openModal(film);
+      document.getElementById('grid').append(card);
+    }
+
+    async function openModal(film) {
+      document.getElementById('m-title').textContent = `${film.title} (${film.release_date.slice(0,4)})`;
+      const rating10 = (Math.round(film.vote_average * 10) / 10).toFixed(1);
+      document.getElementById('m-rating').textContent = `Valoración: ${rating10}/10`;
+      document.getElementById('m-count').textContent  = `👤 ${film.vote_count} votos`;
+      document.getElementById('m-genre').textContent  = `Géneros: ${film.genre_ids.map(id=>genreMap[id]).filter(Boolean).join(', ')}`;
+      document.getElementById('m-summary').textContent = film.overview;
+
+      const img = document.getElementById('m-img');
+      img.src = placeholder;
+      if (film.poster_path) img.src = `https://image.tmdb.org/t/p/w500${film.poster_path}`;
+
+      const btn = document.getElementById('m-trailer');
+      btn.textContent = '🎬 Cargando tráiler…'; btn.disabled = true;
+      try {
+        const data = await (await fetch(
+          `${BASE_URL}/movie/${film.id}/videos?api_key=${TMDB_API_KEY}&language=es-ES`
+        )).json();
+        const tr = data.results.find(v=>v.type==='Trailer'&&v.site==='YouTube');
+        if (tr) {
+          btn.onclick = () => window.open(`https://www.youtube.com/watch?v=${tr.key}`, '_blank');
+          btn.textContent = '🎬 Ver tráiler'; btn.disabled = false;
+        } else {
+          btn.textContent = '🎬 Tráiler no disponible';
+        }
+      } catch {
+        btn.textContent = '🎬 Error al cargar tráiler';
+      }
+
+      document.getElementById('modal').style.display = 'flex';
+    }
+
+    function closeModal() {
+      document.getElementById('modal').style.display = 'none';
+    }
+
+    document.getElementById('m-close').onclick = closeModal;
+    window.addEventListener('click', e => {
+      if (e.target === document.getElementById('modal')) closeModal();
+    });
+
+    initControls().then(fetchAndDisplay);
+  </script>
+</body>
+</html>

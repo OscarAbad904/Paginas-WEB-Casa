@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>¡Aventura de Compras con Euros!</title>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f0f7ff;
+      --panel-bg: #ffffff;
+      --primary: #4285f4;
+      --primary-dark: #3367d6;
+      --success: #34a853;
+      --error: #ea4335;
+      --accent: #fbbc05;
+      --border-radius: 16px;
+      --shadow: 0 6px 16px rgba(0,0,0,0.12);
+      --transition: 0.3s ease;
+    }
+    
+    * { 
+      box-sizing: border-box;
+    }
+    
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Fredoka', sans-serif;
+      /* Fondo principal con imagen proporcionada */
+      background: var(--bg) url('https://lh3.google.com/u/0/d/1bWFsqUkDK1-IAx2op52Pm5XYYO7gfIpC=w1920-h898-iv1?auditContext=prefetch') no-repeat center center fixed;
+      background-size: cover;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      /* Mantener gradientes decorativos encima del fondo */
+      background-image: 
+        url('https://lh3.google.com/u/0/d/1bWFsqUkDK1-IAx2op52Pm5XYYO7gfIpC=w1920-h898-iv1?auditContext=prefetch'),
+        radial-gradient(#d6ebff 10%, transparent 11%),
+        radial-gradient(#d6ebff 10%, transparent 11%);
+      background-size: cover, 30px 30px, 30px 30px;
+      background-position: center center, 0 0, 15px 15px;
+      background-repeat: no-repeat, repeat, repeat;
+    }
+    
+    header {
+      background: var(--primary);
+      color: #fff;
+      padding: 20px;
+      text-align: center;
+      box-shadow: var(--shadow);
+      position: relative;
+      z-index: 1;
+      border-bottom: 6px solid var(--accent);
+    }
+    
+    .header-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .header-content h1 {
+      font-size: 2.2rem;
+      margin: 0;
+      font-weight: 700;
+      text-shadow: 2px 2px 0 rgba(0,0,0,0.1);
+    }
+    
+    .header-content img {
+      width: 60px;
+      height: 60px;
+      margin: 0 15px;
+      filter: drop-shadow(2px 2px 0 rgba(0,0,0,0.1));
+    }
+    
+    main {
+      flex: 1;
+      padding: 30px 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    
+    .game {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      margin: 24px 0;
+    }
+    
+    @media (max-width: 768px) {
+      .game {
+        grid-template-columns: 1fr;
+      }
+      
+      .header-content h1 {
+        font-size: 1.8rem;
+      }
+    }
+    
+    .panel {
+      background: var(--panel-bg);
+      border-radius: var(--border-radius);
+      padding: 25px;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      border: 4px solid var(--primary);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .panel::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 8px;
+      background: var(--primary);
+    }
+    
+    .panel h2 {
+      margin: 0 0 20px 0;
+      font-size: 1.5rem;
+      font-weight: 700;
+      text-align: center;
+      color: var(--primary);
+      position: relative;
+      display: inline-block;
+    }
+    
+    .panel h2::after {
+      content: '';
+      position: absolute;
+      bottom: -10px;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: var(--accent);
+      border-radius: 2px;
+    }
+    
+    /* Grid para monedas */
+    .coins {
+      display: grid;
+      grid-template-columns: repeat(4, 60px);
+      grid-auto-rows: 60px;
+      gap: 16px;
+      justify-content: center;
+      margin-top: 16px;
+    }
+    
+    .coins .coin {
+      cursor: pointer;
+      transition: transform var(--transition);
+      position: relative;
+      z-index: 1;
+    }
+    
+    .coins .coin:hover {
+      transform: scale(1.1) rotate(5deg);
+    }
+    
+    .coins .coin:active {
+      transform: scale(1.05) rotate(-5deg);
+    }
+    
+    .coins img {
+      width: 60px;
+      height: 60px;
+      filter: drop-shadow(3px 3px 2px rgba(0,0,0,0.2));
+    }
+    
+    /* Panel de objeto dinámico */
+    .items {
+      width: 100%;
+      text-align: center;
+    }
+    
+    .items .item-container {
+      background: #f9f9f9;
+      border-radius: 12px;
+      padding: 15px;
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+      margin-bottom: 15px;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .items .item-container::before {
+      content: '¡Compra esto!';
+      position: absolute;
+      top: 0;
+      right: 0;
+      background: var(--accent);
+      color: #333;
+      font-size: 0.85rem;
+      font-weight: bold;
+      padding: 5px 15px;
+      border-radius: 0 0 0 10px;
+    }
+    
+    .items img {
+      width: 100%;
+      height: 200px;
+      object-fit: contain;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      transition: var(--transition);
+    }
+    
+    .items img:hover {
+      transform: scale(1.05);
+    }
+    
+    .items strong {
+      font-size: 1.1rem;
+      display: block;
+      margin-bottom: 12px;
+      color: #333;
+    }
+    
+    .items .price {
+      font-weight: 700;
+      font-size: 1.4rem;
+      background: var(--primary);
+      color: white;
+      padding: 5px 15px;
+      border-radius: 20px;
+      display: inline-block;
+      box-shadow: 0 3px 0 var(--primary-dark);
+    }
+    
+    /* Zona de pago */
+    #dropzone-container {
+      margin-top: 40px;
+      background: var(--panel-bg);
+      border-radius: var(--border-radius);
+      padding: 25px;
+      box-shadow: var(--shadow);
+      border: 4px solid var(--accent);
+      position: relative;
+    }
+    
+    #dropzone-container h2 {
+      margin: 0 0 20px 0;
+      font-size: 1.5rem;
+      font-weight: 700;
+      text-align: center;
+      color: var(--primary);
+      position: relative;
+      display: inline-block;
+    }
+    
+    #dropzone-container h2::after {
+      content: '';
+      position: absolute;
+      bottom: -10px;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: var(--accent);
+      border-radius: 2px;
+    }
+    
+    .payment {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+    
+    #dropzone {
+      flex: 1;
+      min-height: 120px;
+      background: #f9f9f9;
+      border: 3px dashed #bbb;
+      border-radius: var(--border-radius);
+      padding: 15px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-content: flex-start;
+      transition: background var(--transition), border-color var(--transition);
+    }
+    
+    #dropzone.hover {
+      border-color: var(--primary);
+      background: #e8f0fe;
+    }
+    
+    .coin-clone {
+      width: 50px;
+      height: 50px;
+      cursor: pointer;
+      transition: transform var(--transition);
+      filter: drop-shadow(2px 2px 1px rgba(0,0,0,0.2));
+    }
+    
+    .coin-clone:hover {
+      transform: scale(1.1) rotate(5deg);
+    }
+    
+    button#check {
+      padding: 15px 30px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: var(--border-radius);
+      box-shadow: 0 4px 0 var(--primary-dark);
+      cursor: pointer;
+      transition: all var(--transition);
+      text-transform: uppercase;
+    }
+    
+    button#check:hover {
+      background: var(--primary-dark);
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 var(--primary-dark);
+    }
+    
+    button#check:active {
+      transform: translateY(4px);
+      box-shadow: none;
+    }
+    
+    #result {
+      margin-top: 20px;
+      font-size: 1.2rem;
+      font-weight: 600;
+      text-align: center;
+      padding: 15px;
+      border-radius: 12px;
+      opacity: 0;
+      transition: opacity var(--transition);
+    }
+    
+    #result.visible {
+      opacity: 1;
+    }
+    
+    #result.success {
+      background: rgba(52, 168, 83, 0.15);
+      color: var(--success);
+      border: 2px solid var(--success);
+    }
+    
+    #result.error {
+      background: rgba(234, 67, 53, 0.15);
+      color: var(--error);
+      border: 2px solid var(--error);
+    }
+    
+    /* Elementos decorativos */
+    .coin-decoration {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      z-index: 0;
+      opacity: 0.15;
+    }
+    
+    .progress-bar {
+      width: 100%;
+      height: 20px;
+      background: #f0f0f0;
+      border-radius: 10px;
+      margin-top: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .progress {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--success));
+      width: 0;
+      transition: width 0.5s ease;
+      border-radius: 10px;
+    }
+    
+    .progress-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #333;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    
+    .total-box {
+      background: #f9f9f9;
+      border-radius: 12px;
+      padding: 10px 15px;
+      margin-top: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+    }
+    
+    .total-label {
+      font-weight: 600;
+      color: #555;
+    }
+    
+    .total-amount {
+      font-weight: 700;
+      color: var(--primary);
+      font-size: 1.1rem;
+    }
+    
+    /* Confetti para celebración */
+    .confetti {
+      position: fixed;
+      width: 10px;
+      height: 10px;
+      background-color: #f00;
+      position: absolute;
+      left: 50%;
+      animation: confetti-fall 3s ease-in forwards;
+      z-index: 999;
+    }
+    
+    @keyframes confetti-fall {
+      0% {
+        opacity: 1;
+        top: -10px;
+        transform: translateX(0) rotate(0deg);
+      }
+      
+      100% {
+        opacity: 0;
+        top: 100vh;
+        transform: translateX(calc(100px - (200px * var(--random)))) rotate(720deg);
+      }
+    }
+    
+    @keyframes bounce {
+      0%, 20%, 50%, 80%, 100% {
+        transform: translateY(0);
+      }
+      40% {
+        transform: translateY(-20px);
+      }
+      60% {
+        transform: translateY(-10px);
+      }
+    }
+    
+    .bounce {
+      animation: bounce 1s ease;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-content">
+      <img src="https://lh3.google.com/u/0/d/1w9KoUMtOGmt2350YJIY-RAH_1dxrBxIj=w1920-h898-iv1?auditContext=prefetch" alt="Moneda de Euro">
+      <h1>¡Aventura de Compras con Euros!</h1>
+      <img src="https://lh3.google.com/u/0/d/1uGeaHbi6CVT85CT1J5D4u9CrU2YLvu-d=w1920-h898-iv1?auditContext=prefetch" alt="Moneda de 2 Euros">
+    </div>
+  </header>
+  
+  <main>
+    <div class="game">
+      <!-- Panel de monedas -->
+      <div class="panel" id="coinsPanel">
+        <h2>Tus Monedas Mágicas</h2>
+        <div class="coins">
+          <div class="coin" data-value="2"><img src="https://lh3.google.com/u/0/d/1uGeaHbi6CVT85CT1J5D4u9CrU2YLvu-d=w1920-h898-iv1?auditContext=prefetch" alt="2 euros"></div>
+          <div class="coin" data-value="1"><img src="https://lh3.google.com/u/0/d/1w9KoUMtOGmt2350YJIY-RAH_1dxrBxIj=w1920-h898-iv1?auditContext=prefetch" alt="1 euro"></div>
+          <div class="coin" data-value="0.50"><img src="https://lh3.google.com/u/0/d/1_AY4R2pB55tkzKsirrgkdmhpV6jBVdPi=w1920-h898-iv1?auditContext=prefetch" alt="50 céntimos"></div>
+          <div class="coin" data-value="0.20"><img src="https://lh3.google.com/u/0/d/1tVY4svlO0oEdUiGD1g7JCIeIB1ZLudYh=w1920-h898-iv1?auditContext=prefetch" alt="20 céntimos"></div>
+          <div class="coin" data-value="0.10"><img src="https://lh3.google.com/u/0/d/10yfjjx5DohOEMrbptszuaqPURYQLBqwY=w1920-h898-iv1?auditContext=prefetch" alt="10 céntimos"></div>
+          <div class="coin" data-value="0.05"><img src="https://lh3.google.com/u/0/d/1nfPZwcyrJ5DeF3wvgdz_IyiLDCFSBExL=w1920-h898-iv1?auditContext=prefetch" alt="5 céntimos"></div>
+          <div class="coin" data-value="0.02"><img src="https://lh3.google.com/u/0/d/1MbCv6GihhVoxLnSmQpBydvAcNHS2z13O=w1920-h898-iv1?auditContext=prefetch" alt="2 céntimos"></div>
+          <div class="coin" data-value="0.01"><img src="https://lh3.google.com/u/0/d/11E4zEoizpa6jHlFic06aH8rSxxlsmH-N=w1920-h898-iv1?auditContext=prefetch" alt="1 céntimo"></div>
+        </div>
+        
+        <div class="hint" style="margin-top: 20px; font-size: 0.9rem; color: #555; text-align: center;">
+          ¡Haz clic en las monedas para usarlas en tu compra!
+        </div>
+      </div>
+      
+      <!-- Panel de objeto único -->
+      <div class="panel items" id="itemsPanel">
+        <h2>Tesoro para Comprar</h2>
+        <div class="progress-bar">
+          <div class="progress" id="levelProgress"></div>
+          <div class="progress-text">Nivel 1</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Zona de pago -->
+    <div id="dropzone-container">
+      <h2>Tu Cesta Mágica</h2>
+      <div class="payment">
+        <div id="dropzone"></div>
+        <button id="check">¡Pagar!</button>
+      </div>
+      <div class="total-box">
+        <span class="total-label">Total pagado:</span>
+        <span class="total-amount" id="totalAmount">0,00 €</span>
+      </div>
+      <div id="result"></div>
+    </div>
+  </main>
+
+  <script>
+    const itemsPanel = document.getElementById('itemsPanel');
+    const dropzone = document.getElementById('dropzone');
+    const resultEl = document.getElementById('result');
+    const button = document.getElementById('check');
+    const totalAmount = document.getElementById('totalAmount');
+    const levelProgress = document.getElementById('levelProgress');
+    let currentPrice = 0;
+    let products = [];
+    let correctAnswers = 0;
+    let level = 1;
+    
+    // Productos por defecto en caso de fallo al cargar la API
+    const fallbackProducts = [
+      { id: 1, title: "Libro de Cuentos Mágicos", price: 6.99, image: "/api/placeholder/320/200" },
+      { id: 2, title: "Peluche de Dinosaurio", price: 9.99, image: "/api/placeholder/320/200" },
+      { id: 3, title: "Coches de Carreras", price: 4.50, image: "/api/placeholder/320/200" },
+      { id: 4, title: "Juego de Lápices de Colores", price: 3.25, image: "/api/placeholder/320/200" },
+      { id: 5, title: "Pulsera de la Amistad", price: 1.75, image: "/api/placeholder/320/200" },
+      { id: 6, title: "Balón de Fútbol Pequeño", price: 8.50, image: "/api/placeholder/320/200" },
+      { id: 7, title: "Caja de Plastilina", price: 5.99, image: "/api/placeholder/320/200" },
+      { id: 8, title: "Mochila Escolar", price: 7.50, image: "/api/placeholder/320/200" }
+    ];
+
+    // Agregar monedas decorativas al fondo
+    function addCoinDecorations() {
+      const body = document.body;
+      const coinImages = [
+        "https://lh3.google.com/u/0/d/1uGeaHbi6CVT85CT1J5D4u9CrU2YLvu-d=w1920-h898-iv1?auditContext=prefetch",
+        "https://lh3.google.com/u/0/d/1w9KoUMtOGmt2350YJIY-RAH_1dxrBxIj=w1920-h898-iv1?auditContext=prefetch",
+        "https://lh3.google.com/u/0/d/1_AY4R2pB55tkzKsirrgkdmhpV6jBVdPi=w1920-h898-iv1?auditContext=prefetch"
+      ];
+      
+      for (let i = 0; i < 10; i++) {
+        const coin = document.createElement('img');
+        coin.src = coinImages[Math.floor(Math.random() * coinImages.length)];
+        coin.className = 'coin-decoration';
+        coin.style.left = Math.random() * 100 + '%';
+        coin.style.top = Math.random() * 100 + '%';
+        coin.style.transform = `rotate(${Math.random() * 360}deg)`;
+        body.appendChild(coin);
+      }
+    }
+
+    async function loadProducts() {
+      try {
+        const res = await fetch('https://fakestoreapi.com/products');
+        const all = await res.json();
+        products = all.filter(p => p.price <= 10);
+        if (products.length === 0) {
+          products = fallbackProducts;
+        }
+      } catch (e) {
+        console.error('Error cargando productos:', e);
+        products = fallbackProducts;
+      }
+      resetGame();
+    }
+
+    function pickRandom() {
+      if (!products.length) return null;
+      const idx = Math.floor(Math.random() * products.length);
+      return products[idx];
+    }
+
+    function renderItem(p) {
+      const itemsContent = `
+        <div class="item-container">
+          <img src="${p.image}" alt="${p.title}">
+          <strong>${p.title}</strong>
+          <span class="price">${p.price.toLocaleString('es-ES',{style:'currency',currency:'EUR'})}</span>
+        </div>
+      `;
+      
+      const productContainer = document.createElement('div');
+      productContainer.innerHTML = itemsContent;
+      
+      // Limpiar contenido existente pero mantener el título y la barra de progreso
+      const existingContent = itemsPanel.innerHTML;
+      const newContent = existingContent.split('<div class="progress-bar">')[0] + 
+        '<div class="progress-bar">' + 
+        existingContent.split('<div class="progress-bar">')[1];
+      itemsPanel.innerHTML = newContent;
+      
+      // Agregar el nuevo producto
+      itemsPanel.appendChild(productContainer);
+      
+      currentPrice = Math.round(p.price * 100) / 100;
+      
+      // Animar el producto
+      const img = itemsPanel.querySelector('.item-container img');
+      img.style.transform = 'scale(0)';
+      setTimeout(() => {
+        img.style.transform = 'scale(1)';
+      }, 100);
+    }
+
+    function resetGame() {
+      dropzone.innerHTML = '';
+      resultEl.textContent = '';
+      resultEl.className = '';
+      button.textContent = '¡Pagar!';
+      button.onclick = checkPayment;
+      updateTotalAmount();
+      
+      const p = pickRandom();
+      if (p) renderItem(p);
+    }
+
+    function updateTotalAmount() {
+      const total = Array.from(dropzone.querySelectorAll('.coin-clone'))
+        .reduce((sum, img) => sum + parseFloat(img.dataset.value), 0);
+      const rounded = Math.round(total * 100) / 100;
+      totalAmount.textContent = rounded.toLocaleString('es-ES', {style:'currency', currency:'EUR'});
+    }
+
+    function setupCoins() {
+      document.querySelectorAll('.coin').forEach(coin => {
+        coin.addEventListener('click', () => {
+          const value = parseFloat(coin.dataset.value);
+          const src = coin.querySelector('img').src;
+          
+          // Animar moneda original
+          coin.classList.add('bounce');
+          setTimeout(() => {
+            coin.classList.remove('bounce');
+          }, 1000);
+          
+          // Crear clon de moneda
+          const img = document.createElement('img');
+          img.src = src;
+          img.className = 'coin-clone';
+          img.dataset.value = value;
+          img.style.transform = 'scale(0)';
+          
+          img.addEventListener('click', () => {
+            img.style.transform = 'scale(0)';
+            setTimeout(() => {
+              img.remove();
+              updateTotalAmount();
+            }, 200);
+          });
+          
+          dropzone.appendChild(img);
+          
+          // Animar aparición de moneda
+          setTimeout(() => {
+            img.style.transform = 'scale(1) rotate(' + (Math.random() * 10 - 5) + 'deg)';
+          }, 50);
+          
+          updateTotalAmount();
+        });
+      });
+    }
+
+    function createConfetti() {
+      const colors = ['#4285f4', '#34a853', '#fbbc05', '#ea4335', '#46bdc6'];
+      
+      for (let i = 0; i < 100; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti';
+        confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        confetti.style.left = Math.random() * 100 + 'vw';
+        confetti.style.width = Math.random() * 10 + 5 + 'px';
+        confetti.style.height = Math.random() * 10 + 5 + 'px';
+        confetti.style.setProperty('--random', Math.random());
+        document.body.appendChild(confetti);
+        
+        setTimeout(() => {
+          confetti.remove();
+        }, 3000);
+      }
+    }
+
+    function updateLevel() {
+      correctAnswers++;
+      
+      // Actualizar nivel cada 3 respuestas correctas
+      if (correctAnswers % 3 === 0) {
+        level++;
+        document.querySelector('.progress-text').textContent = `Nivel ${level}`;
+      }
+      
+      // Actualizar barra de progreso
+      const progress = (correctAnswers % 3) * 33.33;
+      levelProgress.style.width = progress + '%';
+    }
+
+    function checkPayment() {
+      const total = Array.from(dropzone.querySelectorAll('.coin-clone'))
+        .reduce((sum, img) => sum + parseFloat(img.dataset.value), 0);
+      const rounded = Math.round(total * 100) / 100;
+      
+      if (rounded === currentPrice) {
+        resultEl.textContent = '¡FANTÁSTICO! Has pagado la cantidad exacta. ¡Eres un experto con las monedas!';
+        resultEl.className = 'visible success';
+        button.textContent = '¡Siguiente Tesoro!';
+        button.onclick = () => {
+          updateLevel();
+          resetGame();
+        };
+        
+        // Efectos de celebración
+        createConfetti();
+        
+        // Hacer bounce a todas las monedas en el dropzone
+        dropzone.querySelectorAll('.coin-clone').forEach((coin, i) => {
+          setTimeout(() => {
+            coin.style.transform = 'scale(1.2) rotate(' + (Math.random() * 20 - 10) + 'deg)';
+            setTimeout(() => {
+              coin.style.transform = 'scale(1) rotate(' + (Math.random() * 10 - 5) + 'deg)';
+            }, 200);
+          }, i * 100);
+        });
+      } else {
+        resultEl.textContent = `¡Ups! Has pagado ${rounded.toLocaleString('es-ES',{style:'currency',currency:'EUR'})} pero el precio es ${currentPrice.toLocaleString('es-ES',{style:'currency',currency:'EUR'})}. ¡Inténtalo de nuevo!`;
+        resultEl.className = 'visible error';
+        
+        // Efecto de sacudida en el dropzone
+        dropzone.style.animation = 'shake 0.5s';
+        setTimeout(() => {
+          dropzone.style.animation = '';
+        }, 500);
+      }
+    }
+
+    // Iniciar el juego
+    window.addEventListener('DOMContentLoaded', async () => {
+      addCoinDecorations();
+      setupCoins();
+      await loadProducts();
+      
+      // Inicializar barra de progreso
+      levelProgress.style.width = '0%';
+      
+      // Añadir evento para resaltar el dropzone
+      dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzone.classList.add('hover');
+      });
+      
+      dropzone.addEventListener('dragleave', () => {
+        dropzone.classList.remove('hover');
+      });
+      
+      dropzone.addEventListener('drop', () => {
+        dropzone.classList.remove('hover');
+      });
+    });
+  </script>
+</body>
+</html>

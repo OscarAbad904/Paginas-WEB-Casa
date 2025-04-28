@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>¡La Tienda Mágica!</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: 'Comic Sans MS', 'Chalkboard SE', cursive;
+    }
+    
+    body {
+      margin: 0;
+      padding: 20px;
+      /* Fondo principal con imagen proporcionada */
+      background: url('https://lh3.google.com/u/0/d/1SiJQPtV_2AVuEJLwd-Mn3GGCI0JDYURJ=w1920-h898-iv1?auditContext=prefetch') no-repeat center center fixed;
+      background-size: cover;
+      /* Puedes mantener un color de fondo de respaldo si lo deseas */
+      /* background-color: #e1f5fe; */
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+      border: 4px solid #ff9800;
+    }
+    
+    h1 {
+      text-align: center;
+      color: #ff6d00;
+      font-size: 2.2rem;
+      margin-top: 0;
+      margin-bottom: 15px;
+      text-shadow: 2px 2px 0 #ffe0b2;
+    }
+    
+    .store-display {
+      background: #fff3e0;
+      border-radius: 15px;
+      padding: 15px;
+      margin-bottom: 20px;
+      border: 3px solid #ffcc80;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .store-banner {
+      background: #ff9800;
+      color: white;
+      width: 120%;
+      margin-left: -10%;
+      margin-top: -15px;
+      padding: 8px;
+      text-align: center;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      transform: rotate(-2deg);
+      margin-bottom: 15px;
+      font-weight: bold;
+      font-size: 1.2rem;
+    }
+    
+    .controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 10px;
+    }
+    
+    button {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 12px;
+      background: #4caf50;
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 4px 0 #388e3c;
+      transition: .2s;
+      font-size: 1rem;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+    
+    button:hover {
+      background: #388e3c;
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 #388e3c;
+    }
+    
+    button:active {
+      transform: translateY(4px);
+      box-shadow: none;
+    }
+    
+    #new {
+      background: #ff9800;
+      box-shadow: 0 4px 0 #f57c00;
+    }
+    
+    #new:hover {
+      background: #f57c00;
+      box-shadow: 0 2px 0 #f57c00;
+    }
+    
+    #check {
+      background: #2196f3;
+      box-shadow: 0 4px 0 #1976d2;
+    }
+    
+    #check:hover {
+      background: #1976d2;
+      box-shadow: 0 2px 0 #1976d2;
+    }
+    
+    .info {
+      font-weight: bold;
+      font-size: 1.2rem;
+      color: #333;
+      background: #fff;
+      padding: 10px 15px;
+      border-radius: 10px;
+      text-align: center;
+      border: 2px dashed #ff9800;
+      margin-bottom: 10px;
+      width: 100%;
+    }
+    
+    .price-display {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    
+    .price-tag {
+      background: #fff;
+      padding: 8px 15px;
+      border-radius: 30px;
+      font-weight: bold;
+      border: 2px solid #ff9800;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    
+    .price-tag:before {
+      content: '';
+      display: inline-block;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+    }
+    
+    .price-tag.product:before {
+      background: #f44336;
+    }
+    
+    .price-tag.paid:before {
+      background: #4caf50;
+    }
+    
+    .price-tag.change:before {
+      background: #2196f3;
+    }
+    
+    .game {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    
+    .panel {
+      background: #fff;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      flex: 1;
+      min-width: 250px;
+      border: 3px solid #2196f3;
+      position: relative;
+    }
+    
+    .panel:before {
+      content: '';
+      position: absolute;
+      top: -3px;
+      left: -3px;
+      right: -3px;
+      bottom: -3px;
+      border: 2px dashed #fff;
+      border-radius: 16px;
+      pointer-events: none;
+    }
+    
+    .panel h2 {
+      margin-top: 0;
+      font-size: 1.5rem;
+      text-align: center;
+      color: #2196f3;
+      border-bottom: 2px dashed #ffcc80;
+      padding-bottom: 8px;
+      margin-bottom: 15px;
+    }
+    
+    .coins {
+      background: linear-gradient(135deg, #ffe0b2 0%, #ffcc80 100%);
+    }
+    
+    .coin, .coin-clone {
+      cursor: grab;
+      margin: 6px;
+      display: inline-block;
+      transition: transform 0.2s;
+    }
+    
+    .coin:hover, .coin-clone:hover {
+      transform: scale(1.1) rotate(5deg);
+    }
+    
+    .coin img, .coin-clone {
+      width: 60px;
+      height: 60px;
+      filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.2));
+    }
+    
+    #dropzone {
+      min-height: 150px;
+      background: #f3f8fc;
+      padding: 15px;
+      border: 3px dashed #2196f3;
+      border-radius: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    #result {
+      margin-top: 15px;
+      font-weight: bold;
+      font-size: 1.3rem;
+      text-align: center;
+      padding: 10px;
+      border-radius: 10px;
+      transition: all 0.3s;
+    }
+    
+    .correct {
+      background: #d4edda;
+      color: #155724;
+      animation: celebrate 0.5s ease-in-out 3;
+    }
+    
+    .incorrect {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    
+    .character {
+      position: absolute;
+      width: 80px;
+      height: 80px;
+      right: 20px;
+      bottom: 20px;
+      background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="%23ffcc80"/><circle cx="35" cy="40" r="5" fill="%23333"/><circle cx="65" cy="40" r="5" fill="%23333"/><path d="M40 65 Q50 75 60 65" stroke="%23333" stroke-width="3" fill="none"/></svg>') no-repeat;
+      background-size: contain;
+      animation: bounce 2s infinite;
+      z-index: 2;
+    }
+    
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    
+    @keyframes celebrate {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+    
+    .hint {
+      font-size: 0.9rem;
+      color: #666;
+      text-align: center;
+      margin-top: 10px;
+      font-style: italic;
+    }
+    
+    @media (hover:none) {
+      .coin, .coin-clone {
+        cursor: pointer;
+      }
+    }
+    
+    @media (max-width: 600px) {
+      .controls {
+        flex-direction: column;
+      }
+      
+      .game {
+        flex-direction: column;
+      }
+      
+      .price-display {
+        flex-direction: column;
+        align-items: center;
+      }
+    }
+    
+    .item-animation {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      /* SVG solo con el círculo verde, fondo totalmente transparente */
+      background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="20" fill="%234caf50"/></svg>') no-repeat;
+      background-size: contain;
+      background-color: transparent;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>¡La Tienda Mágica!</h1>
+    
+    <div class="store-display">
+      <div class="store-banner">¡Bienvenido a nuestra tienda!</div>
+      <span class="info" id="challengeText">Pulsa "Nuevo cliente" para comenzar a jugar</span>
+      
+      <div class="price-display">
+        <span class="price-tag product" id="priceTag">Precio: 0,00 €</span>
+        <span class="price-tag paid" id="paidTag">Pagado: 0,00 €</span>
+        <span class="price-tag change" id="changeTag">Devolver: 0,00 €</span>
+      </div>
+      
+      <div class="controls">
+        <button id="new">Nuevo cliente</button>
+        <button id="check">Comprobar</button>
+      </div>
+      <div class="character"></div>
+    </div>
+
+    <div class="game">
+      <!-- Panel monedas -->
+      <div class="panel coins" id="coinsPanel">
+        <h2>Tu Caja</h2>
+        <div class="coin" draggable="true" data-value="1"><img src="https://lh3.google.com/u/0/d/11E4zEoizpa6jHlFic06aH8rSxxlsmH-N=w1920-h898-iv1?auditContext=prefetch" alt="1 céntimo"></div>
+        <div class="coin" draggable="true" data-value="2"><img src="https://lh3.google.com/u/0/d/1MbCv6GihhVoxLnSmQpBydvAcNHS2z13O=w1920-h898-iv1?auditContext=prefetch" alt="2 céntimos"></div>
+        <div class="coin" draggable="true" data-value="5"><img src="https://lh3.google.com/u/0/d/1nfPZwcyrJ5DeF3wvgdz_IyiLDCFSBExL=w1920-h898-iv1?auditContext=prefetch" alt="5 céntimos"></div>
+        <div class="coin" draggable="true" data-value="10"><img src="https://lh3.google.com/u/0/d/10yfjjx5DohOEMrbptszuaqPURYQLBqwY=w1920-h898-iv1?auditContext=prefetch" alt="10 céntimos"></div>
+        <div class="coin" draggable="true" data-value="20"><img src="https://lh3.google.com/u/0/d/1tVY4svlO0oEdUiGD1g7JCIeIB1ZLudYh=w1920-h898-iv1?auditContext=prefetch" alt="20 céntimos"></div>
+        <div class="coin" draggable="true" data-value="50"><img src="https://lh3.google.com/u/0/d/1_AY4R2pB55tkzKsirrgkdmhpV6jBVdPi=w1920-h898-iv1?auditContext=prefetch" alt="50 céntimos"></div>
+        <div class="coin" draggable="true" data-value="100"><img src="https://lh3.google.com/u/0/d/1w9KoUMtOGmt2350YJIY-RAH_1dxrBxIj=w1920-h898-iv1?auditContext=prefetch" alt="1 euro"></div>
+        <div class="coin" draggable="true" data-value="200"><img src="https://lh3.google.com/u/0/d/1uGeaHbi6CVT85CT1J5D4u9CrU2YLvu-d=w1920-h898-iv1?auditContext=prefetch" alt="2 euros"></div>
+      </div>
+
+      <!-- Zona de cambio -->
+      <div class="panel">
+        <h2>Devuelve el Cambio</h2>
+        <div id="dropzone"></div>
+        <div id="result"></div>
+        <div class="hint">Haz clic en las monedas para quitarlas</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const COIN_VALUES = [1, 2, 5, 10, 20, 50, 100, 200];
+    const COIN_IMGS = {
+      1: "https://lh3.google.com/u/0/d/11E4zEoizpa6jHlFic06aH8rSxxlsmH-N=w1920-h898-iv1?auditContext=prefetch",
+      2: "https://lh3.google.com/u/0/d/1MbCv6GihhVoxLnSmQpBydvAcNHS2z13O=w1920-h898-iv1?auditContext=prefetch",
+      5: "https://lh3.google.com/u/0/d/1nfPZwcyrJ5DeF3wvgdz_IyiLDCFSBExL=w1920-h898-iv1?auditContext=prefetch",
+      10: "https://lh3.google.com/u/0/d/10yfjjx5DohOEMrbptszuaqPURYQLBqwY=w1920-h898-iv1?auditContext=prefetch",
+      20: "https://lh3.google.com/u/0/d/1tVY4svlO0oEdUiGD1g7JCIeIB1ZLudYh=w1920-h898-iv1?auditContext=prefetch",
+      50: "https://lh3.google.com/u/0/d/1_AY4R2pB55tkzKsirrgkdmhpV6jBVdPi=w1920-h898-iv1?auditContext=prefetch",
+      100: "https://lh3.google.com/u/0/d/1w9KoUMtOGmt2350YJIY-RAH_1dxrBxIj=w1920-h898-iv1?auditContext=prefetch",
+      200: "https://lh3.google.com/u/0/d/1uGeaHbi6CVT85CT1J5D4u9CrU2YLvu-d=w1920-h898-iv1?auditContext=prefetch"
+    };
+
+    const dropzone = document.getElementById('dropzone');
+    const result = document.getElementById('result');
+    const challengeText = document.getElementById('challengeText');
+    const priceTag = document.getElementById('priceTag');
+    const paidTag = document.getElementById('paidTag');
+    const changeTag = document.getElementById('changeTag');
+    
+    let price = 0, paid = 0, change = 0;
+    const productNames = [
+      "Chicle mágico", "Lápiz de colores", "Pegatinas brillantes", 
+      "Caramelos saltarines", "Burbujas voladoras", "Borrador divertido", 
+      "Galletas de la suerte", "Gominolas saltarinas", "Juguete sorpresa", 
+      "Cromo coleccionable"
+    ];
+
+    function randomInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+    
+    function formatEuro(c) {
+      return (c / 100).toFixed(2).replace('.', ',') + ' €';
+    }
+
+    function createFloatingItem() {
+      // Crear un artículo flotante para animación
+      const item = document.createElement('div');
+      item.className = 'item-animation';
+      
+      // Posición aleatoria
+      const container = document.querySelector('.store-display');
+      const left = randomInt(50, container.offsetWidth - 100);
+      const top = randomInt(60, container.offsetHeight - 100);
+      
+      item.style.left = left + 'px';
+      item.style.top = top + 'px';
+      
+      container.appendChild(item);
+      
+      // Animar y eliminar
+      setTimeout(() => {
+        item.style.transition = 'all 1s ease-in-out';
+        item.style.transform = 'translateY(-20px)';
+        item.style.opacity = '0';
+        setTimeout(() => {
+          item.remove();
+        }, 1000);
+      }, randomInt(500, 2000));
+    }
+
+    function newClient() {
+      // Animación del botón
+      const btn = document.getElementById('new');
+      btn.style.transform = "translateY(4px)";
+      btn.style.boxShadow = "none";
+      
+      // Generar nuevos valores
+      price = randomInt(5, 995); // 0,05 € – 9,95 €
+      const payOptions = [100, 200, 500, 1000, 2000];
+      paid = payOptions.find(v => v > price);
+      change = paid - price;
+      
+      // Actualizar textos
+      const productName = productNames[randomInt(0, productNames.length - 1)];
+      challengeText.textContent = `¡Cliente nuevo! Ha comprado un ${productName}`;
+      priceTag.textContent = `Precio: ${formatEuro(price)}`;
+      paidTag.textContent = `Pagado: ${formatEuro(paid)}`;
+      changeTag.textContent = `Devolver: ${formatEuro(change)}`;
+      
+      // Crear efectos visuales
+      for (let i = 0; i < 3; i++) {
+        setTimeout(() => createFloatingItem(), i * 300);
+      }
+      
+      // Reiniciar
+      reset();
+      
+      // Restaurar botón
+      setTimeout(() => {
+        btn.style.transform = "";
+        btn.style.boxShadow = "";
+      }, 200);
+    }
+
+    function addCoin(value) {
+      const img = new Image(60, 60);
+      img.src = COIN_IMGS[value];
+      img.classList.add('coin-clone');
+      img.dataset.value = value;
+      img.style.transform = "scale(0)";
+      makeRemovable(img);
+      dropzone.appendChild(img);
+      
+      // Animación de entrada
+      setTimeout(() => {
+        img.style.transform = "scale(1) rotate(" + (Math.random() * 10 - 5) + "deg)";
+      }, 10);
+      
+      updateTotal();
+    }
+
+    function makeRemovable(el) {
+      // click para eliminar
+      el.addEventListener('click', () => {
+        el.style.transform = "scale(0)";
+        setTimeout(() => {
+          el.remove();
+          updateTotal();
+        }, 200);
+      });
+      
+      // drag para eliminar (PC)
+      el.setAttribute('draggable', 'true');
+      el.addEventListener('dragstart', e => e.dataTransfer.setData('removing', 'true'));
+      el.addEventListener('dragend', e => {
+        const below = document.elementFromPoint(e.clientX, e.clientY);
+        if (!dropzone.contains(below)) {
+          el.style.transform = "scale(0)";
+          setTimeout(() => {
+            el.remove();
+            updateTotal();
+          }, 200);
+        }
+      });
+    }
+
+    function updateTotal() {
+      const total = [...dropzone.querySelectorAll('.coin-clone')].reduce((s, i) => s + parseInt(i.dataset.value), 0);
+      result.textContent = `Total: ${formatEuro(total)}`;
+      
+      // Si ya hay un resultado previo, actualizarlo
+      if (result.classList.contains('correct') || result.classList.contains('incorrect')) {
+        check(false); // Comprobar silenciosamente
+      }
+    }
+
+    // monedas originales
+    document.querySelectorAll('.coin').forEach(c => {
+      // clic móvil
+      c.addEventListener('click', () => {
+        if (!price) {
+          alert('¡Pulsa "Nuevo cliente" primero!');
+          return;
+        }
+        
+        c.style.transform = "scale(0.9)";
+        setTimeout(() => { c.style.transform = ""; }, 150);
+        addCoin(parseInt(c.dataset.value));
+      });
+      
+      // drag PC
+      c.addEventListener('dragstart', e => e.dataTransfer.setData('value', c.dataset.value));
+    });
+
+    dropzone.addEventListener('dragover', e => {
+      e.preventDefault();
+      dropzone.style.background = "#e6f4ff";
+    });
+    
+    dropzone.addEventListener('dragleave', () => {
+      dropzone.style.background = "#f3f8fc";
+    });
+    
+    dropzone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropzone.style.background = "#f3f8fc";
+      
+      if (e.dataTransfer.getData('removing')) return;
+      
+      if (!price) {
+        alert('¡Pulsa "Nuevo cliente" primero!');
+        return;
+      }
+      
+      const val = parseInt(e.dataTransfer.getData('value'));
+      if (!isNaN(val)) addCoin(val);
+    });
+
+    function check(animate = true) {
+      if (!price) {
+        alert('¡Pulsa "Nuevo cliente" primero!');
+        return;
+      }
+      
+      const total = [...dropzone.querySelectorAll('.coin-clone')].reduce((s, i) => s + parseInt(i.dataset.value), 0);
+      
+      if (total === change) {
+        result.className = 'correct';
+        result.textContent = '¡CORRECTO! ¡Cambio exacto!';
+        
+        if (animate) {
+          // Animar monedas
+          dropzone.querySelectorAll('.coin-clone').forEach((coin, i) => {
+            setTimeout(() => {
+              coin.style.transform = "scale(1.2) rotate(" + (Math.random() * 20 - 10) + "deg)";
+              setTimeout(() => {
+                coin.style.transform = "scale(1) rotate(" + (Math.random() * 10 - 5) + "deg)";
+              }, 200);
+            }, i * 100);
+          });
+        }
+      } else {
+        result.className = 'incorrect';
+        result.textContent = `Has dado ${formatEuro(total)}, debes dar ${formatEuro(change)}`;
+        
+        if (animate) {
+          // Sacudir el dropzone
+          dropzone.style.animation = "shake 0.5s";
+          setTimeout(() => { dropzone.style.animation = "none"; }, 500);
+        }
+      }
+    }
+
+    function reset() {
+      const oldCoins = dropzone.querySelectorAll('.coin-clone');
+      oldCoins.forEach((coin, i) => {
+        setTimeout(() => {
+          coin.style.transform = "scale(0)";
+          setTimeout(() => coin.remove(), 200);
+        }, i * 50);
+      });
+      
+      // Limpiar resultados
+      result.textContent = '';
+      result.className = '';
+    }
+
+    document.getElementById('check').addEventListener('click', () => {
+      const btn = document.getElementById('check');
+      btn.style.transform = "translateY(4px)";
+      btn.style.boxShadow = "none";
+      setTimeout(() => {
+        btn.style.transform = "";
+        btn.style.boxShadow = "";
+        check();
+      }, 200);
+    });
+
+    // Vincular el botón "Nuevo cliente" a la función
+    document.getElementById('new').addEventListener('click', newClient);
+
+    // Añadir animación de sacudida
+    document.head.insertAdjacentHTML('beforeend', `
+      <style>
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          20%, 60% { transform: translateX(-5px); }
+          40%, 80% { transform: translateX(5px); }
+        }
+      </style>
+    `);
+  </script>
+</body>
+</html>
