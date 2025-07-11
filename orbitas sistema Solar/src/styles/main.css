@@ -1,0 +1,39 @@
+:root {
+  --color-bg: #18181b;
+  --color-fg: #fff;
+  --color-accent: #3297fa;
+}
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: 'Inter', Arial, sans-serif;
+  margin: 0;
+}
+.app-root {
+  display: flex;
+  height: 100vh;
+}
+.sidebar {
+  background: #232323;
+  color: #fff;
+}
+main {
+  position: relative;
+  background: #18181b;
+}
+.hud {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 10;
+}
+.timeline {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+  padding: 0.5rem;
+  z-index: 10;
+}

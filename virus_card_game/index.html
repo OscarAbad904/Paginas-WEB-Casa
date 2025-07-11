@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Virus! – Tú vs Bot</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <header>
+    <h1>Virus! – Tú vs Bot</h1>
+    <div class="header-buttons">
+      <button id="btn-help"    class="secondary">¿Cómo se juega?</button>
+      <button id="btn-discard" class="secondary">Descartar</button>
+      <button id="btn-reset"   class="primary">Nueva partida</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- MAZO -->
+    <section class="zone deck-zone">
+      <h2>Mazo</h2>
+      <div id="deck" class="pile" title="Mazo"></div>
+      <small id="deck-count"></small>
+    </section>
+
+    <!-- ÓRGANOS JUGADOR -->
+    <section class="zone organs-zone">
+      <h2>Tus órganos</h2>
+      <div id="player-organs" class="organs-board"></div>
+      <p id="player-msg" class="message"></p>
+    </section>
+
+    <!-- ÓRGANOS BOT -->
+    <section class="zone organs-zone">
+      <h2>Órganos del bot</h2>
+      <div id="bot-organs" class="organs-board"></div>
+      <p id="bot-msg" class="message bot"></p>
+    </section>
+
+    <!-- DESCARTE -->
+    <section class="zone discard-zone">
+      <h2>Descarte</h2>
+      <div id="discard" class="pile" title="Pila de descarte"></div>
+      <small id="discard-count"></small>
+    </section>
+  </main>
+
+  <!-- MANO DEL JUGADOR -->
+  <section class="hand-wrapper">
+    <h2>Tu mano</h2>
+    <div id="hand" class="hand"></div>
+  </section>
+
+  <!-- Templates de carta y slot (no tocar) -->
+  <template id="card-template">
+    <div class="card">
+      <img class="base">
+      <img class="overlay">
+    </div>
+  </template>
+
+  <template id="slot-template">
+    <div class="slot">
+      <img class="base">
+      <img class="overlay">
+    </div>
+  </template>
+
+  <!-- Modal de instrucciones -->
+  <div id="modal" class="modal hidden">
+    <div class="modal-content modal-flex">
+      <button id="close-modal" class="close-btn">×</button>
+      <div class="modal-img-wrap">
+        <img src="images/help_visual.png" alt="Hoja de ayuda Virus!" style="max-width:180px;min-width:120px;width:100%;border-radius:8px;box-shadow:0 2px 8px #0003;">
+      </div>
+      <div class="modal-help-text">
+        <h2>Instrucciones rápidas</h2>
+        <p><strong>Objetivo:</strong> reunir 4 órganos sanos (o vacunados) antes que el bot.</p>
+        <ul>
+          <li>Tu turno:
+            <ol>
+              <li>Robar hasta 3 cartas (clic en el mazo).</li>
+              <li>Jugar 1 carta <em>o</em> hacer clic en <strong>Descartar</strong> y elegir 1–3 cartas.</li>
+            </ol>
+          </li>
+          <li><strong>Órgano</strong>: coloca en un hueco vacío.</li>
+          <li><strong>Virus</strong>: infecta órgano del mismo color (o cualquiera si es multicolor).</li>
+          <li><strong>Cura</strong>: limpia un virus del mismo color (o cualquiera si es multicolor).</li>
+        </ul>
+        <p>Después de jugar o descartar, robas hasta volver a 3 cartas y pasa el turno.</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
