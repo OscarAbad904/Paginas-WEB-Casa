@@ -1,212 +1,66 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap');
-
-:root{
-  --clr-heart:#ff9aa3;
-  --clr-brain:#7aa5ff;
-  --clr-bone:#f4b860;
-  --clr-stomach:#2dd4a0;
-  --radius:10px;
-  --shadow:0 4px 8px rgba(0,0,0,.5);
-}
-
-*{box-sizing:border-box;margin:0;padding:0;}
-
+/* Estilos personalizados para la versión mejorada */
 body {
-  font-family:'Montserrat',sans-serif;
-  background:#1f1f1f;
-  color:#e5e7eb;
-  padding:1rem;
-  min-height:100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+    font-family: 'Poppins', sans-serif;
+    background-color: #111827;
+    color: #f3f4f6;
 }
 
-/* ----- Ayuda visual ----- */
-#visual-help{
-  position:absolute;
-  left:1rem;
-  top:5.5rem;
-  width:430px;
-  max-width:32%;
+.card, .organ-slot {
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+    transition: all 0.2s ease-in-out;
+    position: relative;
+    overflow: hidden;
+    border: 2px solid rgba(255, 255, 255, 0.2);
 }
-#visual-help img{
-  width:100%;
-  border-radius:12px;
-  border:3px solid #4b5563;
-  box-shadow:var(--shadow);
+.card:hover {
+    transform: translateY(-6px) scale(1.03);
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
 }
-
-/* ----- Cabecera ----- */
-header{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:1rem;
-  max-width:1000px;
-}
-h1{font-size:1.8rem;}
-.header-buttons{display:flex;gap:.5rem;}
-
-button{
-  cursor:pointer;
-  border-radius:var(--radius);
-  border:1px solid transparent;
-  transition:filter .2s;
-}
-button.primary{
-  background:#6366f1;
-  color:#fff;
-  padding:.45rem 1rem;
-}
-button.secondary{
-  background:#2d3748;
-  color:#e5e7eb;
-  padding:.4rem .8rem;
-  font-size:.9rem;
-  border-color:#4a5568;
-}
-button:hover{filter:brightness(1.15);}
-
-/* ----- Paneles de juego ----- */
-.layout {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2.5rem 1.2rem; /* más separación vertical */
-  justify-content: center;
-  max-width: 1100px;
-  margin: 0 auto;
-}
-
-.zone{display:flex;flex-direction:column;align-items:center;}
-
-.hand-wrapper {
-  max-width: 1000px;
-  margin: 2.5rem auto 0 auto;
-  text-align: center;
-}
-
-.hand{display:flex;gap:.8rem;flex-wrap:wrap;justify-content:center;margin-top:.4rem;}
-
-/* ----- Elementos gráficos ----- */
-.card,
-.slot,
-.pile{
-  width:120px;
-  aspect-ratio:2/3;
-  border:3px solid #4b5563;
-  border-radius:var(--radius);
-  box-shadow:var(--shadow);
-  position:relative;
-  overflow:hidden;
-}
-
-.card{cursor:pointer;display:flex;justify-content:center;align-items:center;transition:transform .2s;}
-.card:hover{transform:translateY(-4px);}
-.slot{background:#2f2f2f;display:flex;justify-content:center;align-items:center;}
-.pile{background:#374151;display:flex;justify-content:center;align-items:center;}
-
-.card img.base,
-.slot img.base{width:65%;}
-.card img.overlay,
-.slot img.overlay{
-  position:absolute;
-  top:50%;left:50%;
-  width:55%;
-  transform:translate(-50%,-50%);
-  pointer-events:none;
-}
-.message{min-height:1.3rem;font-weight:600;margin-top:.3rem;font-size:.9rem;}
-.message.bot{color:#9ca3af;font-style:italic;}
-
-small{margin-top:.3rem;color:#9ca3af;font-size:.8rem;}
-
-.heart{background:var(--clr-heart);}
-.brain{background:var(--clr-brain);}
-.bone{background:var(--clr-bone);}
-.stomach{background:var(--clr-stomach);}
-.multi{
-  background:linear-gradient(135deg,#F59E0B 0%,#EF4444 33%,#10B981 66%,#3B82F6 100%);
-  color:#fff;
-}
-
-/* ----- Modal ----- */
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:1000;}
-.modal.hidden{display:none;}
-.modal-content{
-  background:#2d3748;
-  color:#e5e7eb;
-  padding:1.5rem;
-  border-radius:var(--radius);
-  width:90%;
-  max-width:420px;
-  line-height:1.4;
-  box-shadow:var(--shadow);
-  position:relative;
-}
-.modal-content h2{color:#FBBF24;margin-bottom:.4rem;}
-.close-btn{
-  position:absolute;top:.5rem;right:.5rem;
-  background:none;
-  color:#9ca3af;
-  font-size:1.4rem;
-}
-.close-btn:hover{color:#fff;cursor:pointer;}
-.modal li::marker{color:#FBBF24;}
-
-.modal-flex {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  gap: 1.5rem;
-}
-.modal-img-wrap {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-}
-.modal-img-wrap img {
-  max-width: 320px;
-  min-width: 120px;
-  width: 100%;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px #0003;
-}
-.modal-help-text {
-  flex: 1 1 0;
-  min-width: 0;
-}
-@media (max-width: 700px) {
-  .modal-flex {
-    flex-direction: column;
+.organ-slot {
+    background-color: rgba(255, 255, 255, 0.05);
+    display: flex;
     align-items: center;
-  }
-  .modal-img-wrap {
-    margin-bottom: 1rem;
-  }
+    justify-content: center;
 }
-
-/* ----- ÓRGANOS EN GRID 2x2 ----- */
-.organs-board {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  grid-template-rows: repeat(2, 1fr);
-  gap: 0.9rem;
-  justify-items: center;
-  align-items: center;
-  min-width: 260px;
-  min-height: 260px;
+.card.selected {
+    transform: translateY(-10px) scale(1.05);
+    border-color: #6ee7b7;
+    box-shadow: 0 0 20px #6ee7b7;
 }
-
-.zone.organs-zone {
-  margin: 0 1.5rem;
+.valid-target {
+    cursor: pointer;
+    box-shadow: 0 0 20px 5px #10b981;
+    border-color: #10b981;
 }
-
-/* Centrar mejor las cartas en la mano */
-.hand {
-  justify-content: center;
-  align-items: center;
-  margin-left: auto;
-  margin-right: auto;
+.card-icon {
+    width: 60%;
+    height: 60%;
+    filter: drop-shadow(0 2px 2px rgba(0,0,0,0.4));
+}
+.overlay-icon {
+    position: absolute;
+    width: 50%;
+    height: 50%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0.9;
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5));
+}
+.vaccine-overlay { opacity: 0.6; }
+.immune-overlay { opacity: 1; }
+@keyframes pop-in {
+    0% { transform: scale(0.5); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+.animate-pop-in { animation: pop-in 0.3s ease-out forwards; }
+@keyframes slide-up {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+.animate-slide-up { animation: slide-up 0.5s ease-out forwards; }
+.modal-backdrop {
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
 }

@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virus! El Juego - Versión Mejorada</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #111827; /* gray-900 */
+            color: #f3f4f6; /* gray-100 */
+        }
+
+        /* --- Colores de Cartas y Órganos --- */
+        .organ-heart, .card-heart { background-color: #f43f5e; /* rose-500 */ }
+        .organ-brain, .card-brain { background-color: #3b82f6; /* blue-500 */ }
+        .organ-bone, .card-bone { background-color: #eab308; /* yellow-500 */ }
+        .organ-stomach, .card-stomach { background-color: #22c55e; /* green-500 */ }
+        .card-treatment { background: linear-gradient(135deg, #a855f7, #ec4899); } /* purple-500 to pink-500 */
+        .card-multi {
+            background: conic-gradient(from 180deg at 50% 50%, #f43f5e, #eab308, #22c55e, #3b82f6, #f43f5e);
+        }
+
+        /* --- Estilos de Cartas y Tablero --- */
+        .card, .organ-slot {
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+            transition: all 0.2s ease-in-out;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .card:hover {
+            transform: translateY(-6px) scale(1.03);
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+        }
+
+        .organ-slot {
+            background-color: rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .card.selected {
+            transform: translateY(-10px) scale(1.05);
+            border-color: #6ee7b7; /* emerald-300 */
+            box-shadow: 0 0 20px #6ee7b7;
+        }
+
+        .valid-target {
+            cursor: pointer;
+            box-shadow: 0 0 20px 5px #10b981; /* emerald-500 */
+            border-color: #10b981;
+        }
+
+        /* --- Iconos SVG dentro de las cartas/órganos --- */
+        .card-icon {
+            width: 60%;
+            height: 60%;
+            filter: drop-shadow(0 2px 2px rgba(0,0,0,0.4));
+        }
+        .overlay-icon {
+            position: absolute;
+            width: 50%;
+            height: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0.9;
+            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5));
+        }
+        
+        .vaccine-overlay { opacity: 0.6; }
+        .immune-overlay { opacity: 1; }
+
+        /* --- Animaciones --- */
+        @keyframes pop-in {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop-in { animation: pop-in 0.3s ease-out forwards; }
+        
+        @keyframes slide-up {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .animate-slide-up { animation: slide-up 0.5s ease-out forwards; }
+
+        /* --- Modal --- */
+        .modal-backdrop {
+            background-color: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col p-2 sm:p-4">
+
+    <!-- Encabezado -->
+    <header class="flex-shrink-0 flex flex-col sm:flex-row justify-between items-center p-4 rounded-lg bg-gray-800/50 mb-4">
+        <h1 class="text-2xl md:text-3xl font-bold text-white tracking-wider">Virus! <span class="text-rose-400">El Juego</span></h1>
+        <div class="flex items-center gap-2 sm:gap-4 mt-2 sm:mt-0">
+            <button id="btn-help" class="px-4 py-2 bg-indigo-500 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-600 transition-colors">Ayuda</button>
+            <button id="btn-reset" class="px-4 py-2 bg-rose-500 text-white font-semibold rounded-lg shadow-md hover:bg-rose-600 transition-colors">Nueva Partida</button>
+        </div>
+    </header>
+
+    <!-- Tablero de Juego -->
+    <main class="flex-grow grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] gap-6 items-start">
+        <!-- Área del Bot -->
+        <section id="bot-area" class="w-full">
+            <h2 class="text-xl font-bold text-center mb-2 text-gray-400">Oponente (Bot)</h2>
+            <div id="bot-board" class="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-gray-800/50 rounded-xl min-h-[150px]"></div>
+            <p id="bot-msg" class="text-center mt-2 text-gray-400 italic min-h-[24px]"></p>
+        </section>
+
+        <!-- Zona Central (Mazo y Descarte) -->
+        <section class="flex flex-row lg:flex-col items-center justify-around lg:justify-start gap-8 py-4">
+            <div class="text-center">
+                <h2 class="text-lg font-semibold mb-2">Mazo</h2>
+                <div id="deck-pile" class="card w-28 h-40 sm:w-32 sm:h-44 bg-gray-600 flex items-center justify-center cursor-pointer group">
+                    <div class="w-full h-full bg-cover bg-center rounded-lg border-2 border-gray-400 group-hover:border-blue-400 transition-all" style="background-image: url('https://placehold.co/128x176/374151/FFFFFF?text=VIRUS!')"></div>
+                </div>
+                <span id="deck-count" class="mt-2 text-lg font-mono"></span>
+            </div>
+            <div class="text-center">
+                <h2 class="text-lg font-semibold mb-2">Descarte</h2>
+                <div id="discard-pile" class="card w-28 h-40 sm:w-32 sm:h-44 bg-gray-800 flex items-center justify-center"></div>
+                <span id="discard-count" class="mt-2 text-lg font-mono"></span>
+            </div>
+        </section>
+
+        <!-- Área del Jugador -->
+        <section id="player-area" class="w-full">
+            <h2 class="text-xl font-bold text-center mb-2 text-white">Tus Órganos</h2>
+            <div id="player-board" class="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-gray-800/50 rounded-xl min-h-[150px]"></div>
+            <p id="player-msg" class="text-center mt-2 text-emerald-300 font-semibold min-h-[24px]"></p>
+        </section>
+    </main>
+
+    <!-- Mano del Jugador y Controles -->
+    <footer class="flex-shrink-0 mt-6">
+        <div id="player-controls" class="flex justify-center items-center gap-4 mb-2">
+             <button id="btn-discard-action" class="px-5 py-2 bg-yellow-500 text-white font-semibold rounded-lg shadow-md hover:bg-yellow-600 transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed">Descartar</button>
+        </div>
+        <div id="player-hand" class="flex justify-center items-end gap-2 sm:gap-4 p-4 min-h-[200px] animate-slide-up"></div>
+    </footer>
+    
+    <!-- Modal de Ayuda -->
+    <div id="help-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 modal-backdrop">
+        <div class="bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl p-6 border border-gray-700 relative">
+            <button id="close-modal-btn" class="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            <h2 class="text-2xl font-bold text-center mb-4 text-indigo-400">¿Cómo Jugar a Virus!?</h2>
+            <div class="text-gray-300 space-y-3">
+                <p><strong>Objetivo:</strong> ¡Sé el primero en conseguir 4 órganos diferentes, sanos e inmunizados!</p>
+                <div>
+                    <strong>En tu turno, debes hacer una de estas dos cosas:</strong>
+                    <ul class="list-disc list-inside ml-4 mt-1">
+                        <li><strong>Jugar 1 carta:</strong> Pon un órgano, un virus, una medicina o un tratamiento.</li>
+                        <li><strong>Descartar cartas:</strong> Tira a la pila de descarte tantas cartas de tu mano como quieras.</li>
+                    </ul>
+                </div>
+                <p>Al final de tu turno, roba cartas del mazo hasta que vuelvas a tener 3 en la mano.</p>
+                <div>
+                    <strong>Tipos de Cartas:</strong>
+                    <ul class="list-disc list-inside ml-4 mt-1 space-y-1">
+                        <li><strong>Órgano:</strong> Juégalo en un espacio vacío de tu zona.</li>
+                        <li><strong>Virus:</strong> Infecta un órgano del mismo color de tu oponente.</li>
+                        <li><strong>Medicina:</strong> Úsala para curar un órgano infectado, vacunar uno sano, o inmunizar uno ya vacunado. ¡Un órgano inmunizado no puede ser infectado!</li>
+                        <li><strong>Tratamientos:</strong> ¡Cartas especiales con efectos potentes!
+                            <ul class="list-['▹'] list-inside ml-6">
+                                <li><strong>Ladrón:</strong> Roba un órgano de tu oponente.</li>
+                                <li><strong>Trasplante:</strong> Intercambia uno de tus órganos por uno de tu oponente.</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+                 <p><strong>¡Ganas la partida</strong> si consigues un cuerpo con 4 órganos distintos sanos o inmunizados!</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Templates (invisibles) -->
+    <template id="card-template">
+        <div class="card w-28 h-40 sm:w-32 sm:h-44 flex flex-col items-center justify-center p-2 cursor-pointer text-white font-bold">
+            <div class="card-icon-wrapper flex-grow flex items-center justify-center"></div>
+            <p class="card-type-label text-sm bg-black/30 px-2 py-0.5 rounded-full"></p>
+            <p class="card-name-label text-xs mt-1"></p>
+        </div>
+    </template>
+
+    <template id="organ-slot-template">
+        <div class="organ-slot w-full aspect-square flex items-center justify-center"></div>
+    </template>
+
+
+    <script type="module">
+        // --- CONSTANTES Y DEFINICIONES ---
+        const ORGANS = { HEART: 'heart', BRAIN: 'brain', BONE: 'bone', STOMACH: 'stomach' };
+        const CARD_TYPES = { ORGAN: 'organ', VIRUS: 'virus', MEDICINE: 'medicine', TREATMENT: 'treatment' };
+        const TREATMENT_TYPES = { THIEF: 'thief', TRANSPLANT: 'transplant' };
+        const ORGAN_STATES = { EMPTY: 0, HEALTHY: 1, INFECTED: 10, VACCINATED: 2, IMMUNE: 3 };
+        const PLAYERS = { ME: 'me', BOT: 'bot' };
+
+        // --- ICONOS SVG (para no depender de archivos externos) ---
+        const ICONS = {
+            heart: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`,
+            brain: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C9.24 2 7 4.24 7 7c0 2.24 1.5 4.13 3.53 4.75A5.995 5.995 0 007 17.5c0 1.93 1.57 3.5 3.5 3.5A3.5 3.5 0 0014 17.5a6 6 0 00-3.53-5.75C12.5 11.13 14 9.24 14 7c0-2.76-2.24-5-5-5h3zm-1 19c-1.38 0-2.5-1.12-2.5-2.5 0-1.15.78-2.12 1.82-2.4A4.004 4.004 0 0114 17.5c0 1.38-1.12 2.5-2.5 2.5zM12 4c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3z"/></svg>`,
+            bone: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.78 4.22a3.5 3.5 0 00-4.95 0L12 7.05l-2.83-2.83a3.5 3.5 0 00-4.95 4.95l2.83 2.83-2.83 2.83a3.5 3.5 0 004.95 4.95L12 16.95l2.83 2.83a3.5 3.5 0 004.95-4.95L16.95 12l2.83-2.83a3.5 3.5 0 000-4.95z"/></svg>`,
+            stomach: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c-4.42 0-8 3.58-8 8 0 1.95.7 3.73 1.86 5.14.1.12.14.29.14.45V18c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2v-2.41c0-.16.04-.33.14-.45C19.3 13.73 20 11.95 20 10c0-4.42-3.58-8-8-8zm-2 14v-2h4v2H10zm6-4H8v-2c0-1.1.9-2 2-2h4c1.1 0 2 .9 2 2v2z"/></svg>`,
+            virus: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 11h-2V8h2m0 7h-2v-5h2m8.1-2.1c.1.4.2.8.2 1.2C21.3 14.3 19.3 18 15 18c-1.5 0-2.9-.5-4.1-1.3L12 15l-1.1 1.7c-1.2.8-2.6 1.3-4.1 1.3C2.7 18 .7 14.3.7 11.1c0-.4.1-.8.2-1.2l2.3-1L5 6.4 3.7 4.1C4.9 3 6.6 2.2 8.5 2.2c1.5 0 2.9.5 4.1 1.3L13.7 5l1.1-1.7c1.2-.8 2.6-1.3 4.1-1.3 1.9 0 3.6.8 4.8 2.1l-1.3 2.3L20 8.5l1.1 2.4z"/></svg>`,
+            medicine: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 8.5l-2-2-1.5 1.5-2-2-1.5 1.5-2-2-1.5 1.5-2-2-1.5 1.5-3 3 1.5 1.5 2 2-1.5 1.5 2 2 1.5-1.5 2 2 1.5-1.5 3-3 1.5-1.5-2-2zM13 18.5V22h-2v-3.5c-2.8-.5-5-2.8-5-5.6h2c0 1.8 1.5 3.3 3.5 3.3s3.5-1.5 3.5-3.3h2c0 2.8-2.2 5.1-5 5.6z"/></svg>`,
+            thief: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 18a8 8 0 110-16 8 8 0 010 16zm-1-12h2v4h-2zm0 6h2v2h-2z"/></svg>`,
+            transplant: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 6.5h-9L5 9h14l-2.5-2.5zM7.5 17.5h9L19 15H5l2.5 2.5zM13 11V9h-2v2H9v2h2v2h2v-2h2v-2h-2z"/></svg>`,
+            multi: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.69l5.31 5.31-1.42 1.42L12 5.54l-3.89 3.88-1.42-1.42L12 2.69zm0 18.62l-5.31-5.31 1.42-1.42L12 18.46l3.89-3.88 1.42 1.42L12 21.31zM2.69 12l5.31-5.31 1.42 1.42L5.54 12l3.88 3.89-1.42 1.42L2.69 12zm18.62 0l-5.31 5.31-1.42-1.42L18.46 12l-3.88-3.89 1.42-1.42L21.31 12z"/></svg>`
+        };
+
+        // --- DOM ELEMENTS ---
+        const getEl = (id) => document.getElementById(id);
+        const playerBoardEl = getEl('player-board');
+        const botBoardEl = getEl('bot-board');
+        const playerHandEl = getEl('player-hand');
+        const deckPileEl = getEl('deck-pile');
+        const discardPileEl = getEl('discard-pile');
+        const deckCountEl = getEl('deck-count');
+        const discardCountEl = getEl('discard-count');
+        const playerMsgEl = getEl('player-msg');
+        const botMsgEl = getEl('bot-msg');
+        const resetBtn = getEl('btn-reset');
+        const helpBtn = getEl('btn-help');
+        const discardBtn = getEl('btn-discard-action');
+        const helpModal = getEl('help-modal');
+        const closeModalBtn = getEl('close-modal-btn');
+        const cardTemplate = getEl('card-template');
+        const organSlotTemplate = getEl('organ-slot-template');
+
+        // --- GAME STATE ---
+        let state = {};
+
+        function createInitialState() {
+            return {
+                deck: buildDeck(),
+                discardPile: [],
+                players: {
+                    me: { id: PLAYERS.ME, hand: [], organs: createEmptyBody() },
+                    bot: { id: PLAYERS.BOT, hand: [], organs: createEmptyBody() }
+                },
+                turn: PLAYERS.ME,
+                selectedCard: null,
+                isDiscarding: false,
+                gameOver: false,
+                turnPhase: 'play' // 'play', 'end'
+            };
+        }
+        
+        function createEmptyBody() {
+            return { heart: ORGAN_STATES.EMPTY, brain: ORGAN_STATES.EMPTY, bone: ORGAN_STATES.EMPTY, stomach: ORGAN_STATES.EMPTY };
+        }
+
+        // --- DECK BUILDING ---
+        function buildDeck() {
+            const deck = [];
+            const organTypes = Object.values(ORGANS);
+
+            // 5 de cada órgano
+            organTypes.forEach(organ => deck.push(...Array(5).fill({ type: CARD_TYPES.ORGAN, organ })));
+            // 4 de cada virus
+            organTypes.forEach(organ => deck.push(...Array(4).fill({ type: CARD_TYPES.VIRUS, organ })));
+            // 4 de cada medicina
+            organTypes.forEach(organ => deck.push(...Array(4).fill({ type: CARD_TYPES.MEDICINE, organ })));
+            // 1 virus multicolor
+            deck.push({ type: CARD_TYPES.VIRUS, organ: 'multi' });
+            // 4 medicinas multicolor
+            deck.push(...Array(4).fill({ type: CARD_TYPES.MEDICINE, organ: 'multi' }));
+            // 2 ladrones de órganos
+            deck.push(...Array(2).fill({ type: CARD_TYPES.TREATMENT, treatment: TREATMENT_TYPES.THIEF }));
+            // 3 trasplantes
+            deck.push(...Array(3).fill({ type: CARD_TYPES.TREATMENT, treatment: TREATMENT_TYPES.TRANSPLANT }));
+
+            // Barajar el mazo
+            for (let i = deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [deck[i], deck[j]] = [deck[j], deck[i]];
+            }
+            return deck;
+        }
+
+        // --- RENDERING ---
+        function renderAll() {
+            renderBoard(PLAYERS.ME);
+            renderBoard(PLAYERS.BOT);
+            renderHand();
+            renderPiles();
+            updateMessages();
+            updateControls();
+        }
+
+        function renderBoard(playerId) {
+            const player = state.players[playerId];
+            const boardEl = playerId === PLAYERS.ME ? playerBoardEl : botBoardEl;
+            boardEl.innerHTML = '';
+            Object.entries(player.organs).forEach(([organName, organState]) => {
+                const slot = organSlotTemplate.content.cloneNode(true).firstElementChild;
+                slot.dataset.owner = playerId;
+                slot.dataset.organ = organName;
+                
+                if (organState !== ORGAN_STATES.EMPTY) {
+                    slot.classList.add(`organ-${organName}`);
+                    const icon = document.createElement('div');
+                    icon.innerHTML = ICONS[organName];
+                    icon.className = 'card-icon text-white';
+                    slot.appendChild(icon);
+
+                    if (organState === ORGAN_STATES.INFECTED) {
+                        const virusOverlay = document.createElement('div');
+                        virusOverlay.innerHTML = ICONS.virus;
+                        virusOverlay.className = 'overlay-icon text-red-500';
+                        slot.appendChild(virusOverlay);
+                    } else if (organState === ORGAN_STATES.VACCINATED) {
+                        const vaccineOverlay = document.createElement('div');
+                        vaccineOverlay.innerHTML = ICONS.medicine;
+                        vaccineOverlay.className = 'overlay-icon text-green-400 vaccine-overlay';
+                        slot.appendChild(vaccineOverlay);
+                    } else if (organState === ORGAN_STATES.IMMUNE) {
+                        const immuneOverlay = document.createElement('div');
+                        immuneOverlay.innerHTML = ICONS.medicine;
+                        immuneOverlay.className = 'overlay-icon text-green-300 immune-overlay';
+                        slot.appendChild(immuneOverlay);
+                    }
+                }
+                boardEl.appendChild(slot);
+            });
+        }
+        
+        function renderHand() {
+            playerHandEl.innerHTML = '';
+            state.players.me.hand.forEach(card => {
+                const cardEl = createCardElement(card);
+                cardEl.classList.add('animate-pop-in');
+                playerHandEl.appendChild(cardEl);
+            });
+        }
+
+        function renderPiles() {
+            deckCountEl.textContent = state.deck.length;
+            discardCountEl.textContent = state.discardPile.length;
+
+            if (state.discardPile.length > 0) {
+                const topCard = state.discardPile[state.discardPile.length - 1];
+                discardPileEl.innerHTML = '';
+                discardPileEl.appendChild(createCardElement(topCard, false));
+            } else {
+                discardPileEl.innerHTML = '';
+            }
+        }
+        
+        function createCardElement(card, isInteractive = true) {
+            const cardEl = cardTemplate.content.cloneNode(true).firstElementChild;
+            cardEl.classList.add(`card-${card.organ || card.type}`);
+            
+            const iconWrapper = cardEl.querySelector('.card-icon-wrapper');
+            const typeLabel = cardEl.querySelector('.card-type-label');
+            const nameLabel = cardEl.querySelector('.card-name-label');
+
+            let iconKey = card.organ;
+            let name = card.organ ? card.organ.charAt(0).toUpperCase() + card.organ.slice(1) : '';
+            if (card.type === CARD_TYPES.TREATMENT) {
+                iconKey = card.treatment;
+                name = card.treatment.charAt(0).toUpperCase() + card.treatment.slice(1);
+            }
+            if (card.organ === 'multi') {
+                iconKey = 'multi';
+                name = 'Multicolor';
+            }
+            
+            iconWrapper.innerHTML = ICONS[iconKey];
+            iconWrapper.firstElementChild.classList.add('card-icon');
+            typeLabel.textContent = card.type.charAt(0).toUpperCase() + card.type.slice(1);
+            nameLabel.textContent = name;
+            
+            if (isInteractive) {
+                cardEl.dataset.card = JSON.stringify(card);
+                cardEl.addEventListener('click', () => handleCardClick(card, cardEl));
+            } else {
+                cardEl.classList.remove('cursor-pointer');
+                cardEl.classList.remove('hover:transform');
+            }
+            return cardEl;
+        }
+
+        function updateMessages() {
+            if (state.gameOver) return;
+            if (state.turn === PLAYERS.ME) {
+                if (state.isDiscarding) {
+                    playerMsgEl.textContent = "Selecciona cartas para descartar y confirma.";
+                } else {
+                    playerMsgEl.textContent = "Tu turno. Juega una carta o descarta.";
+                }
+                botMsgEl.textContent = "Esperando...";
+            } else {
+                playerMsgEl.textContent = "Turno del oponente...";
+                botMsgEl.textContent = "Pensando...";
+            }
+        }
+
+        function updateControls() {
+            const isMyTurn = state.turn === PLAYERS.ME && !state.gameOver;
+            discardBtn.disabled = !isMyTurn;
+
+            if (state.isDiscarding) {
+                discardBtn.textContent = 'Confirmar Descarte';
+                discardBtn.classList.remove('bg-yellow-500', 'hover:bg-yellow-600');
+                discardBtn.classList.add('bg-green-500', 'hover:bg-green-600');
+            } else {
+                discardBtn.textContent = 'Descartar';
+                discardBtn.classList.remove('bg-green-500', 'hover:bg-green-600');
+                discardBtn.classList.add('bg-yellow-500', 'hover:bg-yellow-600');
+            }
+        }
+
+        // --- GAME LOGIC ---
+        function startGame() {
+            state = createInitialState();
+            for (let i = 0; i < 3; i++) {
+                drawCard(PLAYERS.ME);
+                drawCard(PLAYERS.BOT);
+            }
+            renderAll();
+        }
+
+        function drawCard(playerId, count = 1) {
+            for (let i = 0; i < count; i++) {
+                if (state.deck.length === 0) {
+                    // Opcional: barajar descarte en mazo nuevo
+                    if (state.discardPile.length > 1) {
+                        state.deck = [...state.discardPile];
+                        state.discardPile = [];
+                        // Barajar
+                        for (let k = state.deck.length - 1; k > 0; k--) {
+                            const l = Math.floor(Math.random() * (k + 1));
+                            [state.deck[k], state.deck[l]] = [state.deck[l], state.deck[k]];
+                        }
+                        displayMessage("¡Mazo vacío! Barajando pila de descarte...", "game");
+                    } else {
+                         displayMessage("¡El mazo se ha agotado!", "game");
+                         checkWin(true); // Forzar chequeo de fin de partida
+                         return;
+                    }
+                }
+                const card = state.deck.pop();
+                if (card) {
+                    state.players[playerId].hand.push(card);
+                }
+            }
+        }
+
+        function endTurn() {
+            if (state.gameOver) return;
+            
+            const currentPlayerId = state.turn;
+            const handSize = state.players[currentPlayerId].hand.length;
+            if (handSize < 3) {
+                drawCard(currentPlayerId, 3 - handSize);
+            }
+
+            if (checkWin()) return;
+
+            state.turn = (state.turn === PLAYERS.ME) ? PLAYERS.BOT : PLAYERS.ME;
+            state.turnPhase = 'play';
+            clearSelection();
+            renderAll();
+
+            if (state.turn === PLAYERS.BOT) {
+                setTimeout(botTurn, 1200);
+            }
+        }
+
+        function checkWin(forceEnd = false) {
+            let winner = null;
+            const checkPlayer = (p) => {
+                const healthyOrgans = Object.values(p.organs).filter(s => s === ORGAN_STATES.HEALTHY || s === ORGAN_STATES.IMMUNE);
+                return healthyOrgans.length >= 4;
+            };
+
+            if (checkPlayer(state.players.me)) winner = PLAYERS.ME;
+            else if (checkPlayer(state.players.bot)) winner = PLAYERS.BOT;
+            
+            if (winner) {
+                state.gameOver = true;
+                displayMessage(winner === PLAYERS.ME ? "¡Felicidades, has ganado!" : "El bot ha ganado la partida.", "win");
+                renderAll();
+                return true;
+            }
+            
+            if (forceEnd && state.deck.length === 0) {
+                 const myOrgans = Object.values(state.players.me.organs).filter(s => s === ORGAN_STATES.HEALTHY || s === ORGAN_STATES.IMMUNE).length;
+                 const botOrgans = Object.values(state.players.bot.organs).filter(s => s === ORGAN_STATES.HEALTHY || s === ORGAN_STATES.IMMUNE).length;
+                 state.gameOver = true;
+                 if (myOrgans > botOrgans) displayMessage("¡Ganas por tener más órganos sanos!", "win");
+                 else if (botOrgans > myOrgans) displayMessage("El bot gana por tener más órganos sanos.", "lose");
+                 else displayMessage("¡Es un empate!", "game");
+                 renderAll();
+                 return true;
+            }
+
+            return false;
+        }
+
+
+        // --- PLAYER ACTIONS ---
+        function handleCardClick(card, cardEl) {
+            if (state.turn !== PLAYERS.ME || state.gameOver) return;
+
+            if (state.isDiscarding) {
+                cardEl.classList.toggle('selected');
+                return;
+            }
+
+            if (state.selectedCard && state.selectedCard.card === card) {
+                clearSelection();
+            } else {
+                clearSelection();
+                state.selectedCard = { card, element: cardEl };
+                cardEl.classList.add('selected');
+                highlightValidTargets(card);
+            }
+        }
+
+        function handleBoardClick(event) {
+            const targetEl = event.target.closest('.organ-slot');
+            if (!targetEl || !state.selectedCard) return;
+
+            const { owner, organ } = targetEl.dataset;
+            const isValid = isValidPlay(state.selectedCard.card, owner, organ);
+
+            if (isValid) {
+                playCard(state.selectedCard.card, owner, organ);
+            } else {
+                displayMessage("No puedes jugar esa carta ahí.", "error");
+                clearSelection();
+            }
+        }
+        
+        function playCard(card, targetOwnerId, targetOrganName) {
+            const player = state.players[state.turn];
+            const opponent = state.players[state.turn === PLAYERS.ME ? PLAYERS.BOT : PLAYERS.ME];
+            let success = false;
+
+            switch (card.type) {
+                case CARD_TYPES.ORGAN:
+                    player.organs[card.organ] = ORGAN_STATES.HEALTHY;
+                    success = true;
+                    break;
+                case CARD_TYPES.VIRUS:
+                    const targetPlayer = targetOwnerId === player.id ? player : opponent;
+                    const organToInfect = card.organ === 'multi' ? targetOrganName : card.organ;
+                    const currentState = targetPlayer.organs[organToInfect];
+                    if (currentState === ORGAN_STATES.VACCINATED) {
+                        targetPlayer.organs[organToInfect] = ORGAN_STATES.HEALTHY;
+                    } else if (currentState === ORGAN_STATES.HEALTHY) {
+                        targetPlayer.organs[organToInfect] = ORGAN_STATES.INFECTED;
+                    }
+                    success = true;
+                    break;
+                case CARD_TYPES.MEDICINE:
+                    const organToCure = card.organ === 'multi' ? targetOrganName : card.organ;
+                    const currentCureState = player.organs[organToCure];
+                    if (currentCureState === ORGAN_STATES.INFECTED) player.organs[organToCure] = ORGAN_STATES.HEALTHY;
+                    else if (currentCureState === ORGAN_STATES.HEALTHY) player.organs[organToCure] = ORGAN_STATES.VACCINATED;
+                    else if (currentCureState === ORGAN_STATES.VACCINATED) player.organs[organToCure] = ORGAN_STATES.IMMUNE;
+                    success = true;
+                    break;
+                case CARD_TYPES.TREATMENT:
+                    if (card.treatment === TREATMENT_TYPES.THIEF) {
+                        player.organs[targetOrganName] = opponent.organs[targetOrganName];
+                        opponent.organs[targetOrganName] = ORGAN_STATES.EMPTY;
+                        success = true;
+                    } else if (card.treatment === TREATMENT_TYPES.TRANSPLANT) {
+                        const myOrganToSwap = targetOrganName; // El que clickeo en mi tablero
+                        const opponentOrganToSwap = state.selectedCard.swapTarget; // El que clickeé en tablero rival
+                        [player.organs[myOrganToSwap], opponent.organs[opponentOrganToSwap]] = [opponent.organs[opponentOrganToSwap], player.organs[myOrganToSwap]];
+                        success = true;
+                    }
+                    break;
+            }
+
+            if (success) {
+                // Mover carta de la mano al descarte
+                player.hand = player.hand.filter(c => c !== card);
+                state.discardPile.push(card);
+                endTurn();
+            } else {
+                clearSelection();
+            }
+        }
+
+        function toggleDiscardMode() {
+            if (state.turn !== PLAYERS.ME || state.gameOver) return;
+
+            state.isDiscarding = !state.isDiscarding;
+            clearSelection(); // Limpia selección de juego normal
+            
+            if (!state.isDiscarding) { // Si se cancela o confirma
+                const cardsToDiscard = [];
+                document.querySelectorAll('#player-hand .card.selected').forEach(el => {
+                    cardsToDiscard.push(JSON.parse(el.dataset.card));
+                    el.classList.remove('selected');
+                });
+
+                if (cardsToDiscard.length > 0) {
+                    state.players.me.hand = state.players.me.hand.filter(handCard => 
+                        !cardsToDiscard.some(discardCard => JSON.stringify(handCard) === JSON.stringify(discardCard))
+                    );
+                    state.discardPile.push(...cardsToDiscard);
+                    displayMessage(`Has descartado ${cardsToDiscard.length} carta(s).`, "player");
+                    endTurn();
+                } else {
+                    renderAll(); // Solo refresca si no se descartó nada
+                }
+            } else { // Si se entra en modo descarte
+                updateControls();
+                updateMessages();
+            }
+        }
+
+        function clearSelection() {
+            if (state.selectedCard) {
+                state.selectedCard.element.classList.remove('selected');
+            }
+            state.selectedCard = null;
+            document.querySelectorAll('.valid-target').forEach(el => el.classList.remove('valid-target'));
+        }
+
+        function highlightValidTargets(card) {
+            document.querySelectorAll('.organ-slot').forEach(slot => {
+                const { owner, organ } = slot.dataset;
+                if (isValidPlay(card, owner, organ)) {
+                    slot.classList.add('valid-target');
+                }
+            });
+        }
+        
+        function isValidPlay(card, targetOwnerId, targetOrganName) {
+            const player = state.players[state.turn];
+            const opponent = state.players[state.turn === PLAYERS.ME ? PLAYERS.BOT : PLAYERS.ME];
+            
+            switch (card.type) {
+                case CARD_TYPES.ORGAN:
+                    return targetOwnerId === player.id && player.organs[card.organ] === ORGAN_STATES.EMPTY;
+                case CARD_TYPES.VIRUS:
+                    const targetPlayer = targetOwnerId === player.id ? player : opponent;
+                    if (targetOwnerId === player.id) return false; // No puedes auto-infectarte
+                    
+                    const organToInfect = card.organ === 'multi' ? targetOrganName : card.organ;
+                    if (targetOrganName !== organToInfect && card.organ !== 'multi') return false;
+                    
+                    const stateToInfect = targetPlayer.organs[organToInfect];
+                    return stateToInfect === ORGAN_STATES.HEALTHY || stateToInfect === ORGAN_STATES.VACCINATED;
+                case CARD_TYPES.MEDICINE:
+                     if (targetOwnerId !== player.id) return false; // Solo puedes curarte a ti mismo
+                     const organToCure = card.organ === 'multi' ? targetOrganName : card.organ;
+                     if (targetOrganName !== organToCure && card.organ !== 'multi') return false;
+                     
+                     const stateToCure = player.organs[organToCure];
+                     return stateToCure !== ORGAN_STATES.EMPTY && stateToCure !== ORGAN_STATES.IMMUNE;
+                case CARD_TYPES.TREATMENT:
+                    if (card.treatment === TREATMENT_TYPES.THIEF) {
+                        if (targetOwnerId === player.id) return false; // No puedes robarte a ti mismo
+                        if (Object.values(player.organs).filter(s => s !== ORGAN_STATES.EMPTY).length >= 4) return false; // No puedes robar si tienes 4 organos
+                        return opponent.organs[targetOrganName] !== ORGAN_STATES.EMPTY && opponent.organs[targetOrganName] !== ORGAN_STATES.IMMUNE;
+                    }
+                    if (card.treatment === TREATMENT_TYPES.TRANSPLANT) {
+                        // Lógica de dos pasos: primero seleccionas el del rival, luego el tuyo
+                        if (!state.selectedCard.swapTarget) { // Primer click (en rival)
+                            if (targetOwnerId === player.id) return false;
+                            if (opponent.organs[targetOrganName] === ORGAN_STATES.EMPTY) return false;
+                            state.selectedCard.swapTarget = targetOrganName;
+                            displayMessage("Ahora selecciona uno de TUS órganos para intercambiar.", "player");
+                            // No es una jugada final, así que no retornamos true
+                            return false; 
+                        } else { // Segundo click (en ti)
+                            if (targetOwnerId !== player.id) return false;
+                            return player.organs[targetOrganName] !== ORGAN_STATES.EMPTY;
+                        }
+                    }
+                    return false;
+            }
+            return false;
+        }
+
+        // --- BOT AI ---
+        function botTurn() {
+            const bot = state.players.bot;
+            const me = state.players.me;
+            let bestPlay = null;
+
+            // Lógica de decisión del bot (simplificada)
+            // 1. Intentar ganar
+            // 2. Bloquear al jugador si está a punto de ganar
+            // 3. Jugar la mejor carta ofensiva/defensiva
+            // 4. Jugar un órgano
+            // 5. Descartar
+            
+            // Simula jugadas y las puntúa
+            const getPlayScore = (card, targetOwner, targetOrgan) => {
+                if (!isValidPlayBot(card, targetOwner, targetOrgan)) return -1;
+                if (card.type === CARD_TYPES.ORGAN) return 5;
+                if (card.type === CARD_TYPES.MEDICINE && bot.organs[targetOrgan] === ORGAN_STATES.VACCINATED) return 10; // Inmunizar
+                if (card.type === CARD_TYPES.MEDICINE) return 7; // Curar/Vacunar
+                if (card.type === CARD_TYPES.VIRUS) return 8; // Atacar
+                if (card.type === CARD_TYPES.TREATMENT) return 9; // Tratamientos son buenos
+                return 1;
+            };
+
+            let potentialPlays = [];
+            for (const card of bot.hand) {
+                for (const targetOwnerId of [PLAYERS.ME, PLAYERS.BOT]) {
+                    for (const targetOrganName of Object.keys(ORGANS)) {
+                        const score = getPlayScore(card, targetOwnerId, targetOrganName);
+                        if (score > 0) {
+                            potentialPlays.push({ card, targetOwnerId, targetOrganName, score });
+                        }
+                    }
+                }
+            }
+
+            if (potentialPlays.length > 0) {
+                potentialPlays.sort((a, b) => b.score - a.score);
+                bestPlay = potentialPlays[0];
+            }
+
+            if (bestPlay) {
+                // Simulación de selección para la lógica de Trasplante
+                if (bestPlay.card.treatment === TREATMENT_TYPES.TRANSPLANT) {
+                    const opponentOrgan = Object.entries(me.organs).find(([name, state]) => state !== ORGAN_STATES.EMPTY && state !== ORGAN_STATES.IMMUNE);
+                    const botOrgan = Object.entries(bot.organs).find(([name, state]) => state === ORGAN_STATES.INFECTED || state === ORGAN_STATES.HEALTHY);
+                    if (opponentOrgan && botOrgan) {
+                        state.selectedCard = { card: bestPlay.card, swapTarget: opponentOrgan[0] };
+                        playCard(bestPlay.card, PLAYERS.BOT, botOrgan[0]);
+                        displayMessage(`Bot usa Trasplante: intercambia su ${botOrgan[0]} por tu ${opponentOrgan[0]}.`, "bot");
+                    } else {
+                        botDiscard(); // No hay buen trasplante, descarta
+                    }
+                } else {
+                    playCard(bestPlay.card, bestPlay.targetOwnerId, bestPlay.targetOrganName);
+                    displayMessage(`Bot juega ${bestPlay.card.type} ${bestPlay.card.organ || bestPlay.card.treatment || ''}`, "bot");
+                }
+            } else {
+                botDiscard();
+            }
+        }
+        
+        function botDiscard() {
+            const cardToDiscard = state.players.bot.hand[0];
+            if(cardToDiscard) {
+                state.players.bot.hand.shift();
+                state.discardPile.push(cardToDiscard);
+                displayMessage("Bot ha descartado una carta.", "bot");
+                endTurn();
+            } else {
+                endTurn(); // No tiene cartas, pasa turno
+            }
+        }
+
+        // Versión de isValidPlay para el bot que no modifica el estado
+        function isValidPlayBot(card, targetOwnerId, targetOrganName) {
+            const player = state.players.bot;
+            const opponent = state.players.me;
+            
+            switch (card.type) {
+                case CARD_TYPES.ORGAN:
+                    return targetOwnerId === player.id && player.organs[card.organ] === ORGAN_STATES.EMPTY;
+                case CARD_TYPES.VIRUS:
+                    if (targetOwnerId !== opponent.id) return false;
+                    const organToInfect = card.organ === 'multi' ? targetOrganName : card.organ;
+                    if (targetOrganName !== organToInfect && card.organ !== 'multi') return false;
+                    const stateToInfect = opponent.organs[organToInfect];
+                    return stateToInfect === ORGAN_STATES.HEALTHY || stateToInfect === ORGAN_STATES.VACCINATED;
+                case CARD_TYPES.MEDICINE:
+                     if (targetOwnerId !== player.id) return false;
+                     const organToCure = card.organ === 'multi' ? targetOrganName : card.organ;
+                     if (targetOrganName !== organToCure && card.organ !== 'multi') return false;
+                     const stateToCure = player.organs[organToCure];
+                     return stateToCure !== ORGAN_STATES.EMPTY && stateToCure !== ORGAN_STATES.IMMUNE;
+                case CARD_TYPES.TREATMENT:
+                    if (card.treatment === TREATMENT_TYPES.THIEF) {
+                        if (targetOwnerId === player.id) return false;
+                        if (Object.values(player.organs).filter(s => s !== ORGAN_STATES.EMPTY).length >= 4) return false;
+                        return opponent.organs[targetOrganName] !== ORGAN_STATES.EMPTY && opponent.organs[targetOrganName] !== ORGAN_STATES.IMMUNE;
+                    }
+                    if (card.treatment === TREATMENT_TYPES.TRANSPLANT) {
+                        const validOpponentOrgans = Object.values(opponent.organs).some(s => s !== ORGAN_STATES.EMPTY && s !== ORGAN_STATES.IMMUNE);
+                        const validPlayerOrgans = Object.values(player.organs).some(s => s !== ORGAN_STATES.EMPTY);
+                        return validOpponentOrgans && validPlayerOrgans;
+                    }
+                    return false;
+            }
+            return false;
+        }
+
+        // --- UTILITIES & MESSAGES ---
+        function displayMessage(msg, type) {
+            switch(type) {
+                case "player": playerMsgEl.textContent = msg; break;
+                case "bot": botMsgEl.textContent = msg; break;
+                case "error": playerMsgEl.textContent = msg; setTimeout(() => updateMessages(), 2000); break;
+                case "win": playerMsgEl.textContent = msg; botMsgEl.textContent = "Partida terminada."; break;
+                case "lose": botMsgEl.textContent = msg; playerMsgEl.textContent = "Partida terminada."; break;
+                default: playerMsgEl.textContent = msg;
+            }
+        }
+        
+        // --- EVENT LISTENERS ---
+        resetBtn.addEventListener('click', startGame);
+        deckPileEl.addEventListener('click', () => {
+            if (state.turn === PLAYERS.ME && !state.gameOver) {
+                displayMessage("Debes jugar o descartar, no robar directamente.", "error");
+            }
+        });
+        playerBoardEl.addEventListener('click', handleBoardClick);
+        botBoardEl.addEventListener('click', handleBoardClick);
+        discardBtn.addEventListener('click', toggleDiscardMode);
+        helpBtn.addEventListener('click', () => helpModal.classList.remove('hidden'));
+        closeModalBtn.addEventListener('click', () => helpModal.classList.add('hidden'));
+        helpModal.addEventListener('click', (e) => {
+            if (e.target === helpModal) helpModal.classList.add('hidden');
+        });
+
+        // --- INITIALIZE ---
+        startGame();
+
+    </script>
+</body>
+</html>

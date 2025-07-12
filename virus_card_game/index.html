@@ -1,99 +1,111 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Virus! – Tú vs Bot</title>
-  <link rel="stylesheet" href="styles.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virus! El Juego - Versión Mejorada</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #111827;
+            color: #f3f4f6;
+        }
+    </style>
 </head>
-<body>
+<body class="min-h-screen flex flex-col p-2 sm:p-4">
 
-  <header>
-    <h1>Virus! – Tú vs Bot</h1>
-    <div class="header-buttons">
-      <button id="btn-help"    class="secondary">¿Cómo se juega?</button>
-      <button id="btn-discard" class="secondary">Descartar</button>
-      <button id="btn-reset"   class="primary">Nueva partida</button>
+    <!-- Encabezado -->
+    <header class="flex-shrink-0 flex flex-col sm:flex-row justify-between items-center p-4 rounded-lg bg-gray-800/50 mb-4">
+        <h1 class="text-2xl md:text-3xl font-bold text-white tracking-wider">Virus! <span class="text-rose-400">El Juego</span></h1>
+        <div class="flex items-center gap-2 sm:gap-4 mt-2 sm:mt-0">
+            <button id="btn-help" class="px-4 py-2 bg-indigo-500 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-600 transition-colors">Ayuda</button>
+            <button id="btn-reset" class="px-4 py-2 bg-rose-500 text-white font-semibold rounded-lg shadow-md hover:bg-rose-600 transition-colors">Nueva Partida</button>
+        </div>
+    </header>
+
+    <!-- Tablero de Juego -->
+    <main class="flex-grow grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] gap-6 items-start">
+        <!-- Área del Bot -->
+        <section id="bot-area" class="w-full">
+            <h2 class="text-xl font-bold text-center mb-2 text-gray-400">Oponente (Bot)</h2>
+            <div id="bot-board" class="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-gray-800/50 rounded-xl min-h-[150px]"></div>
+            <p id="bot-msg" class="text-center mt-2 text-gray-400 italic min-h-[24px]"></p>
+        </section>
+
+        <!-- Zona Central (Mazo y Descarte) -->
+        <section class="flex flex-row lg:flex-col items-center justify-around lg:justify-start gap-8 py-4">
+            <div class="text-center">
+                <h2 class="text-lg font-semibold mb-2">Mazo</h2>
+                <div id="deck-pile" class="card w-28 h-40 sm:w-32 sm:h-44 bg-gray-600 flex items-center justify-center cursor-pointer group">
+                </div>
+                <span id="deck-count" class="mt-2 text-lg font-mono"></span>
+            </div>
+            <div class="text-center">
+                <h2 class="text-lg font-semibold mb-2">Descarte</h2>
+                <div id="discard-pile" class="card w-28 h-40 sm:w-32 sm:h-44 bg-gray-800 flex items-center justify-center"></div>
+                <span id="discard-count" class="mt-2 text-lg font-mono"></span>
+            </div>
+        </section>
+
+        <!-- Área del Jugador -->
+        <section id="player-area" class="w-full">
+            <h2 class="text-xl font-bold text-center mb-2 text-white">Tus Órganos</h2>
+            <div id="player-board" class="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-gray-800/50 rounded-xl min-h-[150px]"></div>
+            <p id="player-msg" class="text-center mt-2 text-emerald-300 font-semibold min-h-[24px]"></p>
+        </section>
+    </main>
+
+    <!-- Mano del Jugador y Controles -->
+    <footer class="flex-shrink-0 mt-6">
+        <div id="player-controls" class="flex justify-center items-center gap-4 mb-2">
+             <button id="btn-discard-action" class="px-5 py-2 bg-yellow-500 text-white font-semibold rounded-lg shadow-md hover:bg-yellow-600 transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed">Descartar</button>
+        </div>
+        <div id="player-hand" class="flex justify-center items-end gap-2 sm:gap-4 p-4 min-h-[200px] animate-slide-up"></div>
+    </footer>
+    
+    <!-- Modal de Ayuda -->
+    <div id="help-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 modal-backdrop">
+        <div class="bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl p-6 border border-gray-700 relative">
+            <button id="close-modal-btn" class="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            <h2 class="text-2xl font-bold text-center mb-4 text-indigo-400">¿Cómo Jugar a Virus!?</h2>
+            <div class="text-gray-300 space-y-3">
+                <p><strong>Objetivo:</strong> ¡Sé el primero en conseguir 4 órganos diferentes, sanos e inmunizados!</p>
+                <div>
+                </div>
+                <p>Al final de tu turno, roba cartas del mazo hasta que vuelvas a tener 3 en la mano.</p>
+                <div>
+                </div>
+            </div>
+        </div>
     </div>
-  </header>
+    
+    <!-- Templates (invisibles) -->
 
-  <main class="layout">
-    <!-- MAZO -->
-    <section class="zone deck-zone">
-      <h2>Mazo</h2>
-      <div id="deck" class="pile" title="Mazo"></div>
-      <small id="deck-count"></small>
-    </section>
+    <!-- Template de carta con imágenes originales -->
+    <template id="card-template">
+        <div class="card w-28 h-40 sm:w-32 sm:h-44 flex flex-col items-center justify-center p-2 cursor-pointer text-white font-bold">
+            <img class="base" style="width:65%;">
+            <img class="overlay" style="position:absolute;top:50%;left:50%;width:55%;transform:translate(-50%,-50%);pointer-events:none;">
+        </div>
+    </template>
 
-    <!-- ÓRGANOS JUGADOR -->
-    <section class="zone organs-zone">
-      <h2>Tus órganos</h2>
-      <div id="player-organs" class="organs-board"></div>
-      <p id="player-msg" class="message"></p>
-    </section>
+    <!-- Template de slot de órgano con imágenes originales -->
+    <template id="organ-slot-template">
+        <div class="organ-slot w-full aspect-square flex items-center justify-center">
+            <img class="base" style="width:65%;">
+            <img class="overlay" style="position:absolute;top:50%;left:50%;width:55%;transform:translate(-50%,-50%);pointer-events:none;">
+        </div>
+    </template>
 
-    <!-- ÓRGANOS BOT -->
-    <section class="zone organs-zone">
-      <h2>Órganos del bot</h2>
-      <div id="bot-organs" class="organs-board"></div>
-      <p id="bot-msg" class="message bot"></p>
-    </section>
 
-    <!-- DESCARTE -->
-    <section class="zone discard-zone">
-      <h2>Descarte</h2>
-      <div id="discard" class="pile" title="Pila de descarte"></div>
-      <small id="discard-count"></small>
-    </section>
-  </main>
-
-  <!-- MANO DEL JUGADOR -->
-  <section class="hand-wrapper">
-    <h2>Tu mano</h2>
-    <div id="hand" class="hand"></div>
-  </section>
-
-  <!-- Templates de carta y slot (no tocar) -->
-  <template id="card-template">
-    <div class="card">
-      <img class="base">
-      <img class="overlay">
-    </div>
-  </template>
-
-  <template id="slot-template">
-    <div class="slot">
-      <img class="base">
-      <img class="overlay">
-    </div>
-  </template>
-
-  <!-- Modal de instrucciones -->
-  <div id="modal" class="modal hidden">
-    <div class="modal-content modal-flex">
-      <button id="close-modal" class="close-btn">×</button>
-      <div class="modal-img-wrap">
-        <img src="images/help_visual.png" alt="Hoja de ayuda Virus!" style="max-width:180px;min-width:120px;width:100%;border-radius:8px;box-shadow:0 2px 8px #0003;">
-      </div>
-      <div class="modal-help-text">
-        <h2>Instrucciones rápidas</h2>
-        <p><strong>Objetivo:</strong> reunir 4 órganos sanos (o vacunados) antes que el bot.</p>
-        <ul>
-          <li>Tu turno:
-            <ol>
-              <li>Robar hasta 3 cartas (clic en el mazo).</li>
-              <li>Jugar 1 carta <em>o</em> hacer clic en <strong>Descartar</strong> y elegir 1–3 cartas.</li>
-            </ol>
-          </li>
-          <li><strong>Órgano</strong>: coloca en un hueco vacío.</li>
-          <li><strong>Virus</strong>: infecta órgano del mismo color (o cualquiera si es multicolor).</li>
-          <li><strong>Cura</strong>: limpia un virus del mismo color (o cualquiera si es multicolor).</li>
-        </ul>
-        <p>Después de jugar o descartar, robas hasta volver a 3 cartas y pasa el turno.</p>
-      </div>
-    </div>
-  </div>
-
-  <script src="script.js"></script>
+    <script type="module" src="script.js"></script>
 </body>
 </html>
