@@ -73,10 +73,12 @@ function renderHand() {
         } else if (card.type === 'virus') {
             base.src = card.organ === 'multi' ? 'images/heart.png' : `images/${card.organ}.png`;
             overlay.src = 'images/virus_overlay.png';
+            overlay.alt = 'superposición de virus';
             overlay.style.opacity = '1';
         } else if (card.type === 'cure') {
             base.src = card.organ === 'multi' ? 'images/heart.png' : `images/${card.organ}.png`;
             overlay.src = 'images/vaccine_overlay.png';
+            overlay.alt = 'superposición de vacuna';
             overlay.style.opacity = '0.8';
         } else {
             base.remove();
@@ -105,11 +107,23 @@ function renderBoard(playerId) {
             case ORGAN_STATES.HEALTHY:
                 base.src = `images/${organName}.png`; overlay.remove(); break;
             case ORGAN_STATES.INFECTED:
-                base.src = `images/${organName}.png`; overlay.src = 'images/virus_overlay.png'; overlay.style.opacity = '1'; break;
+                base.src = `images/${organName}.png`;
+                overlay.src = 'images/virus_overlay.png';
+                overlay.alt = 'superposición de virus';
+                overlay.style.opacity = '1';
+                break;
             case ORGAN_STATES.HALF_VACC:
-                base.src = `images/${organName}.png`; overlay.src = 'images/vaccine_overlay.png'; overlay.style.opacity = '0.6'; break;
+                base.src = `images/${organName}.png`;
+                overlay.src = 'images/vaccine_overlay.png';
+                overlay.alt = 'superposición de vacuna';
+                overlay.style.opacity = '0.6';
+                break;
             case ORGAN_STATES.IMMUNE:
-                base.src = `images/${organName}.png`; overlay.src = 'images/vaccine_overlay.png'; overlay.style.opacity = '1'; break;
+                base.src = `images/${organName}.png`;
+                overlay.src = 'images/vaccine_overlay.png';
+                overlay.alt = 'superposición de vacuna';
+                overlay.style.opacity = '1';
+                break;
         }
         boardEl.appendChild(slot);
     });
@@ -130,10 +144,12 @@ function renderPiles() {
         } else if (topCard.type === 'virus') {
             base.src = topCard.organ === 'multi' ? 'images/heart.png' : `images/${topCard.organ}.png`;
             overlay.src = 'images/virus_overlay.png';
+            overlay.alt = 'superposición de virus';
             overlay.style.opacity = '1';
         } else if (topCard.type === 'cure') {
             base.src = topCard.organ === 'multi' ? 'images/heart.png' : `images/${topCard.organ}.png`;
             overlay.src = 'images/vaccine_overlay.png';
+            overlay.alt = 'superposición de vacuna';
             overlay.style.opacity = '0.8';
         } else {
             base.remove();
