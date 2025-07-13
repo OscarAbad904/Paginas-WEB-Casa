@@ -13,6 +13,7 @@ const botMsgEl = document.getElementById('bot-msg');
 const resetBtn = document.getElementById('btn-reset');
 const helpBtn = document.getElementById('btn-help');
 const discardBtn = document.getElementById('btn-discard-action');
+const confirmBtn = document.getElementById('btn-confirm');
 const helpModal = document.getElementById('help-modal');
 const closeModalBtn = document.getElementById('close-modal-btn');
 const cardTemplate = document.getElementById('card-template');
@@ -118,6 +119,7 @@ function updateMessages() {
 function updateControls() {
     const isMyTurn = state.turn === PLAYERS.ME && !state.ended;
     discardBtn.disabled = !isMyTurn;
+    confirmBtn.disabled = !isMyTurn || !state.selectedCard;
     if (state.isDiscarding) {
         discardBtn.textContent = 'Confirmar Descarte';
         discardBtn.classList.remove('bg-yellow-500', 'hover:bg-yellow-600');
@@ -140,43 +142,65 @@ function renderAll() {
 
 function handleCardClick(card, cardEl) {
     if (state.turn !== PLAYERS.ME || state.ended) return;
+    const label = cardEl.querySelector('.action-label');
     if (state.isDiscarding) {
-        cardEl.classList.toggle('selected');
-        return;
-    }
-    if (state.selectedCard && state.selectedCard.card === card) {
-        clearSelection();
-        cardEl.classList.remove('selected');
+        if (state.selectedCard && state.selectedCard.element !== cardEl) {
+            state.selectedCard.element.classList.remove('selected');
+            state.selectedCard.element.querySelector('.action-label').textContent = '';
+        }
+        if (state.selectedCard && state.selectedCard.card === card) {
+            state.selectedCard = null;
+            cardEl.classList.remove('selected');
+            label.textContent = '';
+        } else {
+            state.selectedCard = { card, element: cardEl };
+            cardEl.classList.add('selected');
+            label.textContent = 'Descartar';
+        }
     } else {
-        if (state.selectedCard) state.selectedCard.element.classList.remove('selected');
-        state.selectedCard = { card, element: cardEl };
-        cardEl.classList.add('selected');
+        if (state.selectedCard && state.selectedCard.element !== cardEl) {
+            state.selectedCard.element.classList.remove('selected');
+            state.selectedCard.element.querySelector('.action-label').textContent = '';
+        }
+        if (state.selectedCard && state.selectedCard.card === card) {
+            state.selectedCard = null;
+            cardEl.classList.remove('selected');
+            label.textContent = '';
+        } else {
+            state.selectedCard = { card, element: cardEl };
+            cardEl.classList.add('selected');
+            label.textContent = 'Usar';
+        }
     }
+    updateControls();
 }
 
 function toggleDiscardMode() {
     if (state.turn !== PLAYERS.ME || state.ended) return;
     state.isDiscarding = !state.isDiscarding;
-    clearSelection();
-    if (!state.isDiscarding) {
-        const cardsToDiscard = [];
-        document.querySelectorAll('#player-hand .card.selected').forEach(el => {
-            const card = el.__card__;
-            cardsToDiscard.push(card);
-            el.classList.remove('selected');
-        });
-        if (cardsToDiscard.length > 0) {
-            state.players.me.hand = state.players.me.hand.filter(c => !cardsToDiscard.includes(c));
-            state.discard.push(...cardsToDiscard);
-            endTurn();
-            renderAll();
-        } else {
-            renderAll();
-        }
-    } else {
-        updateControls();
-        updateMessages();
+    if (state.selectedCard && state.selectedCard.element) {
+        state.selectedCard.element.classList.remove('selected');
+        const lbl = state.selectedCard.element.querySelector('.action-label');
+        if (lbl) lbl.textContent = '';
     }
+    clearSelection();
+    updateControls();
+    updateMessages();
+}
+
+function confirmSelection() {
+    if (state.turn !== PLAYERS.ME || state.ended || !state.selectedCard) return;
+    const card = state.selectedCard.card;
+    const element = state.selectedCard.element;
+    element.classList.remove('selected');
+    const lbl = element.querySelector('.action-label');
+    if (lbl) lbl.textContent = '';
+    state.players.me.hand = state.players.me.hand.filter(c => c !== card);
+    state.discard.push(card);
+    clearSelection();
+    state.isDiscarding = false;
+    endTurn();
+    renderAll();
 }
 
 resetBtn.addEventListener('click', () => { startGame(); renderAll(); });
@@ -187,6 +211,7 @@ deckPileEl.addEventListener('click', () => {
     }
 });
 discardBtn.addEventListener('click', toggleDiscardMode);
+confirmBtn.addEventListener('click', confirmSelection);
 helpBtn.addEventListener('click', () => helpModal.classList.remove('hidden'));
 closeModalBtn.addEventListener('click', () => helpModal.classList.add('hidden'));
 helpModal.addEventListener('click', (e) => {

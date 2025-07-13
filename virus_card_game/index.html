@@ -64,9 +64,10 @@
     <!-- Mano del Jugador y Controles -->
     <footer class="flex-shrink-0 mt-6">
         <div id="player-controls" class="flex justify-center items-center gap-4 mb-2">
-             <button id="btn-discard-action" class="px-5 py-2 bg-yellow-500 text-white font-semibold rounded-lg shadow-md hover:bg-yellow-600 transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed">Descartar</button>
+            <button id="btn-discard-action" class="px-5 py-2 bg-yellow-500 text-white font-semibold rounded-lg shadow-md hover:bg-yellow-600 transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed">Descartar</button>
+            <button id="btn-confirm" class="px-5 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed">Aceptar</button>
         </div>
-        <div id="player-hand" class="flex justify-center items-end gap-2 sm:gap-4 p-4 min-h-[200px] animate-slide-up"></div>
+        <div id="player-hand" class="flex justify-center items-end gap-2 sm:gap-4 p-4 min-h-[160px] animate-slide-up"></div>
     </footer>
     
     <!-- Modal de Ayuda -->
@@ -91,9 +92,10 @@
 
     <!-- Template de carta con imágenes originales -->
     <template id="card-template">
-        <div class="card w-28 h-40 sm:w-32 sm:h-44 flex flex-col items-center justify-center p-2 cursor-pointer text-white font-bold">
+        <div class="card w-24 h-32 sm:w-28 sm:h-40 flex flex-col items-center justify-center p-2 cursor-pointer text-white font-bold">
             <img class="base" alt="icono del órgano" style="width:65%;">
             <img class="overlay" alt="superposición de virus" style="position:absolute;top:50%;left:50%;width:55%;transform:translate(-50%,-50%);pointer-events:none;">
+            <span class="action-label absolute bottom-1 left-0 right-0 text-center text-xs"></span>
         </div>
     </template>
 

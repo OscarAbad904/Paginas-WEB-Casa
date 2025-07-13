@@ -51,10 +51,12 @@ export function startGame() {
 }
 
 export function drawCard(playerId, count = 1) {
+    const hand = state.players[playerId].hand;
     for (let i = 0; i < count; i++) {
         if (state.deck.length === 0) return;
+        if (hand.length >= 3) return;
         const card = state.deck.pop();
-        if (card) state.players[playerId].hand.push(card);
+        if (card) hand.push(card);
     }
 }
 
