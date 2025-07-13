@@ -195,10 +195,24 @@ function confirmSelection() {
     element.classList.remove('selected');
     const lbl = element.querySelector('.action-label');
     if (lbl) lbl.textContent = '';
-    state.players.me.hand = state.players.me.hand.filter(c => c !== card);
-    state.discard.push(card);
+
+    if (state.isDiscarding) {
+        // Discard selected card
+        state.players.me.hand = state.players.me.hand.filter(c => c !== card);
+        state.discard.push(card);
+        state.isDiscarding = false;
+    } else {
+        // Simple play logic: place organ cards on empty slots, otherwise discard
+        const organs = state.players.me.organs;
+        if (card.type === 'organ' && organs[card.organ] === ORGAN_STATES.EMPTY) {
+            organs[card.organ] = ORGAN_STATES.HEALTHY;
+            state.players.me.hand = state.players.me.hand.filter(c => c !== card);
+        } else {
+            state.players.me.hand = state.players.me.hand.filter(c => c !== card);
+            state.discard.push(card);
+        }
+    }
     clearSelection();
-    state.isDiscarding = false;
     endTurn();
     renderAll();
 }
