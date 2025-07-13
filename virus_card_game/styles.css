@@ -28,6 +28,13 @@ body {
     border-color: #6ee7b7;
     box-shadow: 0 0 20px #6ee7b7;
 }
+
+.action-label {
+    background-color: rgba(0, 0, 0, 0.6);
+    pointer-events: none;
+    padding: 0.1rem 0;
+    color: #fff;
+}
 .valid-target {
     cursor: pointer;
     box-shadow: 0 0 20px 5px #10b981;
