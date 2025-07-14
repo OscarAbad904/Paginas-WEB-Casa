@@ -13,7 +13,6 @@ const botMsgEl = document.getElementById('bot-msg');
 const resetBtn = document.getElementById('btn-reset');
 const helpBtn = document.getElementById('btn-help');
 const discardBtn = document.getElementById('btn-discard-action');
-const confirmBtn = document.getElementById('btn-confirm');
 const helpModal = document.getElementById('help-modal');
 const closeModalBtn = document.getElementById('close-modal-btn');
 const cardTemplate = document.getElementById('card-template');
@@ -81,6 +80,14 @@ function highlightValidTargets(card) {
             });
         });
     }
+}
+
+function highlightDiscardTarget() {
+    clearTargetHighlights();
+    const handler = handleDiscardPileClick;
+    discardPileEl.classList.add('valid-target');
+    discardPileEl.addEventListener('click', handler);
+    targetListeners.push({ el: discardPileEl, handler });
 }
 
 function renderHand() {
@@ -173,7 +180,7 @@ function updateMessages() {
     }
     if (state.turn === PLAYERS.ME) {
         if (state.isDiscarding) {
-            playerMsgEl.textContent = 'Selecciona cartas para descartar y confirma.';
+            playerMsgEl.textContent = 'Selecciona una carta y pulsa el descarte.';
         } else {
             playerMsgEl.textContent = 'Tu turno: juega o descarta.';
         }
@@ -187,14 +194,13 @@ function updateMessages() {
 function updateControls() {
     const isMyTurn = state.turn === PLAYERS.ME && !state.ended;
     discardBtn.disabled = !isMyTurn;
-    confirmBtn.disabled = !isMyTurn || !state.isDiscarding || !state.selectedCard;
     if (state.isDiscarding) {
-        discardBtn.textContent = 'Confirmar Descarte';
+        discardBtn.textContent = 'Cancelar';
         discardBtn.classList.remove('bg-yellow-500', 'hover:bg-yellow-600');
-        discardBtn.classList.add('bg-green-500', 'hover:bg-green-600');
+        discardBtn.classList.add('bg-red-500', 'hover:bg-red-600');
     } else {
         discardBtn.textContent = 'Descartar';
-        discardBtn.classList.remove('bg-green-500', 'hover:bg-green-600');
+        discardBtn.classList.remove('bg-red-500', 'hover:bg-red-600');
         discardBtn.classList.add('bg-yellow-500', 'hover:bg-yellow-600');
     }
 }
@@ -220,6 +226,7 @@ function handleCardClick(card, cardEl) {
         state.selectedCard = { card, element: cardEl };
         cardEl.classList.add('selected');
         label.textContent = 'Descartar';
+        highlightDiscardTarget();
     } else {
         if (state.selectedCard && state.selectedCard.element === cardEl) {
             deselectCard();
@@ -242,7 +249,7 @@ function toggleDiscardMode() {
     updateMessages();
 }
 
-function confirmSelection() {
+function handleDiscardPileClick() {
     if (state.turn !== PLAYERS.ME || state.ended || !state.isDiscarding || !state.selectedCard) return;
     const card = state.selectedCard.card;
     state.players.me.hand = state.players.me.hand.filter(c => c !== card);
@@ -253,6 +260,7 @@ function confirmSelection() {
     if (!state.ended) endTurn();
 }
 
+
 resetBtn.addEventListener('click', () => { startGame(); renderAll(); });
 deckPileEl.addEventListener('click', () => {
     if (state.turn === PLAYERS.ME && !state.ended) {
@@ -261,7 +269,7 @@ deckPileEl.addEventListener('click', () => {
     }
 });
 discardBtn.addEventListener('click', toggleDiscardMode);
-confirmBtn.addEventListener('click', confirmSelection);
+discardPileEl.addEventListener('click', handleDiscardPileClick);
 helpBtn.addEventListener('click', () => helpModal.classList.remove('hidden'));
 closeModalBtn.addEventListener('click', () => helpModal.classList.add('hidden'));
 helpModal.addEventListener('click', (e) => {
