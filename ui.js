@@ -63,21 +63,31 @@ function highlightValidTargets(card) {
                 }
             }
         });
-    } else if (card.type === 'virus' || card.type === 'cure') {
-        [PLAYERS.ME, PLAYERS.BOT].forEach(pid => {
-            organNames.forEach(o => {
-                const stateVal = state.players[pid].organs[o];
-                if (stateVal !== ORGAN_STATES.EMPTY && stateVal !== ORGAN_STATES.IMMUNE) {
-                    const el = (pid === PLAYERS.ME ? playerBoardEl : botBoardEl)
-                        .querySelector(`[data-owner="${pid}"][data-organ="${o}"]`);
-                    if (el) {
-                        const handler = () => handleSlotSelected(pid, o);
-                        el.classList.add('valid-target');
-                        el.addEventListener('click', handler);
-                        targetListeners.push({ el, handler });
-                    }
+    } else if (card.type === 'virus') {
+        organNames.forEach(o => {
+            const stateVal = state.players[PLAYERS.BOT].organs[o];
+            if (stateVal !== ORGAN_STATES.EMPTY && stateVal !== ORGAN_STATES.IMMUNE) {
+                const el = botBoardEl.querySelector(`[data-owner="${PLAYERS.BOT}"][data-organ="${o}"]`);
+                if (el) {
+                    const handler = () => handleSlotSelected(PLAYERS.BOT, o);
+                    el.classList.add('valid-target');
+                    el.addEventListener('click', handler);
+                    targetListeners.push({ el, handler });
                 }
-            });
+            }
+        });
+    } else if (card.type === 'cure') {
+        organNames.forEach(o => {
+            const stateVal = state.players[PLAYERS.ME].organs[o];
+            if (stateVal !== ORGAN_STATES.EMPTY && stateVal !== ORGAN_STATES.IMMUNE) {
+                const el = playerBoardEl.querySelector(`[data-owner="${PLAYERS.ME}"][data-organ="${o}"]`);
+                if (el) {
+                    const handler = () => handleSlotSelected(PLAYERS.ME, o);
+                    el.classList.add('valid-target');
+                    el.addEventListener('click', handler);
+                    targetListeners.push({ el, handler });
+                }
+            }
         });
     }
 }

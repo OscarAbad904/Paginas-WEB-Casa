@@ -69,6 +69,11 @@ export function playCard(fromId, card, targetId, organ) {
     const idx = fromHand.indexOf(card);
     if (idx === -1) return false;
 
+    if (fromId === PLAYERS.ME) {
+        if (card.type === 'virus' && targetId !== PLAYERS.BOT) return false;
+        if (card.type === 'cure' && targetId !== PLAYERS.ME) return false;
+    }
+
     const target = state.players[targetId];
     const current = target.organs[organ];
     let success = false;
