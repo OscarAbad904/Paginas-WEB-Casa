@@ -61,7 +61,12 @@ export function drawCard(playerId, count = 1) {
 }
 
 export function checkWin(playerId) {
-    return ORGANS.every(o => state.players[playerId].organs[o] === ORGAN_STATES.IMMUNE);
+    return ORGANS.every(o => {
+        const st = state.players[playerId].organs[o];
+        return st === ORGAN_STATES.HEALTHY ||
+               st === ORGAN_STATES.HALF_VACC ||
+               st === ORGAN_STATES.IMMUNE;
+    });
 }
 
 export function playCard(fromId, card, targetId, organ) {

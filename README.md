@@ -4,7 +4,7 @@ Este repositorio contiene una implementación ligera de **Virus!**, el popular j
 
 ## ¿En qué consiste?
 
-Se trata de una versión simplificada para un solo jugador donde te enfrentas a un bot. Tu objetivo es ser el primero en conseguir cuatro órganos sanos e inmunizados antes que tu oponente. El bot realiza acciones básicas para mantener la partida fluida y ponerte a prueba.
+Se trata de una versión simplificada para un solo jugador donde te enfrentas a un bot. Tu objetivo es ser el primero en conseguir cuatro órganos sanos antes que tu oponente. El bot realiza acciones básicas para mantener la partida fluida y ponerte a prueba.
 
 Entre las características principales se encuentran:
 
