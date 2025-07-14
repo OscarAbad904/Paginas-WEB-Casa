@@ -135,6 +135,56 @@ export function endTurn() {
 
 export function botTurn() {
     const bot = state.players.bot;
+    const me = state.players.me;
+
+    // 1. Intentar curar o vacunar sus propios órganos
+    for (const card of bot.hand) {
+        if (card.type === 'cure') {
+            const organs = card.organ === 'multi' ? ORGANS : [card.organ];
+            for (const o of organs) {
+                const st = bot.organs[o];
+                if (st === ORGAN_STATES.INFECTED || st === ORGAN_STATES.HEALTHY || st === ORGAN_STATES.HALF_VACC) {
+                    if (playCard(PLAYERS.BOT, card, PLAYERS.BOT, o)) {
+                        endTurn();
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. Jugar órganos en espacios vacíos
+    for (const card of bot.hand) {
+        if (card.type === 'organ') {
+            const organs = card.organ === 'multi' ? ORGANS : [card.organ];
+            for (const o of organs) {
+                if (bot.organs[o] === ORGAN_STATES.EMPTY) {
+                    if (playCard(PLAYERS.BOT, card, PLAYERS.BOT, o)) {
+                        endTurn();
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
+    // 3. Atacar con virus al jugador
+    for (const card of bot.hand) {
+        if (card.type === 'virus') {
+            const organs = card.organ === 'multi' ? ORGANS : [card.organ];
+            for (const o of organs) {
+                const st = me.organs[o];
+                if (st !== ORGAN_STATES.EMPTY && st !== ORGAN_STATES.IMMUNE) {
+                    if (playCard(PLAYERS.BOT, card, PLAYERS.ME, o)) {
+                        endTurn();
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
+    // 4. Si no puede jugar, descarta
     if (bot.hand.length > 0) {
         state.discard.push(bot.hand.shift());
     }
