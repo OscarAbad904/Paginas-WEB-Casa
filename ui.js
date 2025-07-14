@@ -1,4 +1,4 @@
-import { state, PLAYERS, ORGANS, ORGAN_STATES, startGame, drawCard, endTurn, clearSelection } from './engine.js';
+import { state, PLAYERS, ORGANS, ORGAN_STATES, startGame, drawCard, endTurn, clearSelection, playCard } from './engine.js';
 
 // DOM elements
 const playerBoardEl = document.getElementById('player-board');
@@ -18,6 +18,70 @@ const helpModal = document.getElementById('help-modal');
 const closeModalBtn = document.getElementById('close-modal-btn');
 const cardTemplate = document.getElementById('card-template');
 const organSlotTemplate = document.getElementById('organ-slot-template');
+
+const targetListeners = [];
+
+function clearTargetHighlights() {
+    targetListeners.forEach(({ el, handler }) => {
+        el.classList.remove('valid-target');
+        el.removeEventListener('click', handler);
+    });
+    targetListeners.length = 0;
+}
+
+function deselectCard() {
+    if (state.selectedCard && state.selectedCard.element) {
+        state.selectedCard.element.classList.remove('selected');
+        const lbl = state.selectedCard.element.querySelector('.action-label');
+        if (lbl) lbl.textContent = '';
+    }
+    clearTargetHighlights();
+    clearSelection();
+    updateControls();
+}
+
+function handleSlotSelected(owner, organ) {
+    const { card } = state.selectedCard || {};
+    if (!card) return;
+    const success = playCard(PLAYERS.ME, card, owner, organ);
+    deselectCard();
+    renderAll();
+    if (success && !state.ended) endTurn();
+}
+
+function highlightValidTargets(card) {
+    clearTargetHighlights();
+    const organNames = card.organ === 'multi' ? ORGANS : [card.organ];
+    if (card.type === 'organ') {
+        organNames.forEach(o => {
+            if (state.players.me.organs[o] === ORGAN_STATES.EMPTY) {
+                const el = playerBoardEl.querySelector(`[data-owner="me"][data-organ="${o}"]`);
+                if (el) {
+                    const handler = () => handleSlotSelected('me', o);
+                    el.classList.add('valid-target');
+                    el.addEventListener('click', handler);
+                    targetListeners.push({ el, handler });
+                }
+            }
+        });
+    } else if (card.type === 'virus' || card.type === 'cure') {
+        [PLAYERS.ME, PLAYERS.BOT].forEach(pid => {
+            organNames.forEach(o => {
+                const stateVal = state.players[pid].organs[o];
+                if (stateVal !== ORGAN_STATES.EMPTY && stateVal !== ORGAN_STATES.IMMUNE) {
+                    const el = (pid === PLAYERS.ME ? playerBoardEl : botBoardEl)
+                        .querySelector(`[data-owner="${pid}"][data-organ="${o}"]`);
+                    if (el) {
+                        const handler = () => handleSlotSelected(pid, o);
+                        el.classList.add('valid-target');
+                        el.addEventListener('click', handler);
+                        targetListeners.push({ el, handler });
+                    }
+                }
+            });
+        });
+    }
+}
 
 function renderHand() {
     playerHandEl.innerHTML = '';
@@ -102,7 +166,11 @@ function renderPiles() {
 }
 
 function updateMessages() {
-    if (state.ended) return;
+    if (state.ended) {
+        playerMsgEl.textContent = state.turn === PLAYERS.ME ? '¡Has ganado!' : 'Derrota...';
+        botMsgEl.textContent = state.turn === PLAYERS.ME ? 'Derrota...' : '¡El bot gana!';
+        return;
+    }
     if (state.turn === PLAYERS.ME) {
         if (state.isDiscarding) {
             playerMsgEl.textContent = 'Selecciona cartas para descartar y confirma.';
@@ -119,7 +187,7 @@ function updateMessages() {
 function updateControls() {
     const isMyTurn = state.turn === PLAYERS.ME && !state.ended;
     discardBtn.disabled = !isMyTurn;
-    confirmBtn.disabled = !isMyTurn || !state.selectedCard;
+    confirmBtn.disabled = !isMyTurn || !state.isDiscarding || !state.selectedCard;
     if (state.isDiscarding) {
         discardBtn.textContent = 'Confirmar Descarte';
         discardBtn.classList.remove('bg-yellow-500', 'hover:bg-yellow-600');
@@ -144,33 +212,24 @@ function handleCardClick(card, cardEl) {
     if (state.turn !== PLAYERS.ME || state.ended) return;
     const label = cardEl.querySelector('.action-label');
     if (state.isDiscarding) {
-        if (state.selectedCard && state.selectedCard.element !== cardEl) {
-            state.selectedCard.element.classList.remove('selected');
-            state.selectedCard.element.querySelector('.action-label').textContent = '';
+        if (state.selectedCard && state.selectedCard.element === cardEl) {
+            deselectCard();
+            return;
         }
-        if (state.selectedCard && state.selectedCard.card === card) {
-            state.selectedCard = null;
-            cardEl.classList.remove('selected');
-            label.textContent = '';
-        } else {
-            state.selectedCard = { card, element: cardEl };
-            cardEl.classList.add('selected');
-            label.textContent = 'Descartar';
-        }
+        deselectCard();
+        state.selectedCard = { card, element: cardEl };
+        cardEl.classList.add('selected');
+        label.textContent = 'Descartar';
     } else {
-        if (state.selectedCard && state.selectedCard.element !== cardEl) {
-            state.selectedCard.element.classList.remove('selected');
-            state.selectedCard.element.querySelector('.action-label').textContent = '';
+        if (state.selectedCard && state.selectedCard.element === cardEl) {
+            deselectCard();
+            return;
         }
-        if (state.selectedCard && state.selectedCard.card === card) {
-            state.selectedCard = null;
-            cardEl.classList.remove('selected');
-            label.textContent = '';
-        } else {
-            state.selectedCard = { card, element: cardEl };
-            cardEl.classList.add('selected');
-            label.textContent = 'Usar';
-        }
+        deselectCard();
+        state.selectedCard = { card, element: cardEl };
+        cardEl.classList.add('selected');
+        label.textContent = 'Usar';
+        highlightValidTargets(card);
     }
     updateControls();
 }
@@ -178,29 +237,20 @@ function handleCardClick(card, cardEl) {
 function toggleDiscardMode() {
     if (state.turn !== PLAYERS.ME || state.ended) return;
     state.isDiscarding = !state.isDiscarding;
-    if (state.selectedCard && state.selectedCard.element) {
-        state.selectedCard.element.classList.remove('selected');
-        const lbl = state.selectedCard.element.querySelector('.action-label');
-        if (lbl) lbl.textContent = '';
-    }
-    clearSelection();
+    deselectCard();
     updateControls();
     updateMessages();
 }
 
 function confirmSelection() {
-    if (state.turn !== PLAYERS.ME || state.ended || !state.selectedCard) return;
+    if (state.turn !== PLAYERS.ME || state.ended || !state.isDiscarding || !state.selectedCard) return;
     const card = state.selectedCard.card;
-    const element = state.selectedCard.element;
-    element.classList.remove('selected');
-    const lbl = element.querySelector('.action-label');
-    if (lbl) lbl.textContent = '';
     state.players.me.hand = state.players.me.hand.filter(c => c !== card);
     state.discard.push(card);
-    clearSelection();
+    deselectCard();
     state.isDiscarding = false;
-    endTurn();
     renderAll();
+    if (!state.ended) endTurn();
 }
 
 resetBtn.addEventListener('click', () => { startGame(); renderAll(); });

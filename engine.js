@@ -60,6 +60,61 @@ export function drawCard(playerId, count = 1) {
     }
 }
 
+export function checkWin(playerId) {
+    return ORGANS.every(o => state.players[playerId].organs[o] === ORGAN_STATES.IMMUNE);
+}
+
+export function playCard(fromId, card, targetId, organ) {
+    const fromHand = state.players[fromId].hand;
+    const idx = fromHand.indexOf(card);
+    if (idx === -1) return false;
+
+    const target = state.players[targetId];
+    const current = target.organs[organ];
+    let success = false;
+
+    switch (card.type) {
+        case 'organ':
+            if (targetId === fromId && current === ORGAN_STATES.EMPTY) {
+                target.organs[organ] = ORGAN_STATES.HEALTHY;
+                success = true;
+            }
+            break;
+        case 'virus':
+            if (current === ORGAN_STATES.INFECTED) {
+                target.organs[organ] = ORGAN_STATES.EMPTY;
+                success = true;
+            } else if (current === ORGAN_STATES.HEALTHY) {
+                target.organs[organ] = ORGAN_STATES.INFECTED;
+                success = true;
+            } else if (current === ORGAN_STATES.HALF_VACC) {
+                target.organs[organ] = ORGAN_STATES.HEALTHY;
+                success = true;
+            }
+            break;
+        case 'cure':
+            if (current === ORGAN_STATES.INFECTED) {
+                target.organs[organ] = ORGAN_STATES.HEALTHY;
+                success = true;
+            } else if (current === ORGAN_STATES.HEALTHY) {
+                target.organs[organ] = ORGAN_STATES.HALF_VACC;
+                success = true;
+            } else if (current === ORGAN_STATES.HALF_VACC) {
+                target.organs[organ] = ORGAN_STATES.IMMUNE;
+                success = true;
+            }
+            break;
+    }
+
+    if (success) {
+        fromHand.splice(idx, 1);
+        state.discard.push(card);
+        if (checkWin(fromId)) state.ended = true;
+    }
+
+    return success;
+}
+
 export function clearSelection() {
     state.selectedCard = null;
 }
