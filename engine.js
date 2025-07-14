@@ -37,7 +37,6 @@ export function createInitialState() {
         },
         turn: PLAYERS.ME,
         ended: false,
-        isDiscarding: false,
         selectedCard: null
     };
 }

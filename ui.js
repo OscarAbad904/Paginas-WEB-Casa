@@ -43,6 +43,7 @@ function handleSlotSelected(owner, organ) {
     const { card } = state.selectedCard || {};
     if (!card) return;
     const success = playCard(PLAYERS.ME, card, owner, organ);
+    if (success) drawCard(PLAYERS.ME);
     deselectCard();
     renderAll();
     if (success && !state.ended) endTurn();
@@ -92,13 +93,6 @@ function highlightValidTargets(card) {
     }
 }
 
-function highlightDiscardTarget() {
-    clearTargetHighlights();
-    const handler = handleDiscardPileClick;
-    discardPileEl.classList.add('valid-target');
-    discardPileEl.addEventListener('click', handler);
-    targetListeners.push({ el: discardPileEl, handler });
-}
 
 function renderHand() {
     playerHandEl.innerHTML = '';
@@ -189,11 +183,7 @@ function updateMessages() {
         return;
     }
     if (state.turn === PLAYERS.ME) {
-        if (state.isDiscarding) {
-            playerMsgEl.textContent = 'Selecciona una carta y pulsa el descarte.';
-        } else {
-            playerMsgEl.textContent = 'Tu turno: juega o descarta.';
-        }
+        playerMsgEl.textContent = 'Tu turno: selecciona una carta para jugar o descartar.';
         botMsgEl.textContent = 'Esperando...';
     } else {
         playerMsgEl.textContent = 'Turno del oponente...';
@@ -203,16 +193,10 @@ function updateMessages() {
 
 function updateControls() {
     const isMyTurn = state.turn === PLAYERS.ME && !state.ended;
-    discardBtn.disabled = !isMyTurn;
-    if (state.isDiscarding) {
-        discardBtn.textContent = 'Cancelar';
-        discardBtn.classList.remove('bg-yellow-500', 'hover:bg-yellow-600');
-        discardBtn.classList.add('bg-red-500', 'hover:bg-red-600');
-    } else {
-        discardBtn.textContent = 'Descartar';
-        discardBtn.classList.remove('bg-red-500', 'hover:bg-red-600');
-        discardBtn.classList.add('bg-yellow-500', 'hover:bg-yellow-600');
-    }
+    discardBtn.disabled = !(isMyTurn && state.selectedCard);
+    discardBtn.textContent = 'Descartar';
+    discardBtn.classList.remove('bg-red-500', 'hover:bg-red-600');
+    discardBtn.classList.add('bg-yellow-500', 'hover:bg-yellow-600');
 }
 
 function renderAll() {
@@ -227,45 +211,41 @@ function renderAll() {
 function handleCardClick(card, cardEl) {
     if (state.turn !== PLAYERS.ME || state.ended) return;
     const label = cardEl.querySelector('.action-label');
-    if (state.isDiscarding) {
-        if (state.selectedCard && state.selectedCard.element === cardEl) {
-            deselectCard();
-            return;
-        }
+
+    if (state.selectedCard && state.selectedCard.element === cardEl) {
         deselectCard();
-        state.selectedCard = { card, element: cardEl };
-        cardEl.classList.add('selected');
-        label.textContent = 'Descartar';
-        highlightDiscardTarget();
-    } else {
-        if (state.selectedCard && state.selectedCard.element === cardEl) {
-            deselectCard();
-            return;
-        }
-        deselectCard();
-        state.selectedCard = { card, element: cardEl };
-        cardEl.classList.add('selected');
-        label.textContent = 'Usar';
-        highlightValidTargets(card);
+        return;
     }
-    updateControls();
-}
 
-function toggleDiscardMode() {
-    if (state.turn !== PLAYERS.ME || state.ended) return;
-    state.isDiscarding = !state.isDiscarding;
     deselectCard();
+    state.selectedCard = { card, element: cardEl };
+    cardEl.classList.add('selected');
+
+    if (card.type === 'organ') {
+        const organs = card.organ === 'multi' ? ORGANS : [card.organ];
+        const target = organs.find(o => state.players.me.organs[o] === ORGAN_STATES.EMPTY);
+        if (target) {
+            const success = playCard(PLAYERS.ME, card, PLAYERS.ME, target);
+            if (success) drawCard(PLAYERS.ME);
+            deselectCard();
+            renderAll();
+            if (success && !state.ended) endTurn();
+            return;
+        }
+    }
+
+    label.textContent = 'Usar';
+    highlightValidTargets(card);
     updateControls();
-    updateMessages();
 }
 
-function handleDiscardPileClick() {
-    if (state.turn !== PLAYERS.ME || state.ended || !state.isDiscarding || !state.selectedCard) return;
+function handleDiscardAction() {
+    if (state.turn !== PLAYERS.ME || state.ended || !state.selectedCard) return;
     const card = state.selectedCard.card;
     state.players.me.hand = state.players.me.hand.filter(c => c !== card);
     state.discard.push(card);
     deselectCard();
-    state.isDiscarding = false;
+    drawCard(PLAYERS.ME);
     renderAll();
     if (!state.ended) endTurn();
 }
@@ -278,8 +258,7 @@ deckPileEl.addEventListener('click', () => {
         renderAll();
     }
 });
-discardBtn.addEventListener('click', toggleDiscardMode);
-discardPileEl.addEventListener('click', handleDiscardPileClick);
+discardBtn.addEventListener('click', handleDiscardAction);
 helpBtn.addEventListener('click', () => helpModal.classList.remove('hidden'));
 closeModalBtn.addEventListener('click', () => helpModal.classList.add('hidden'));
 helpModal.addEventListener('click', (e) => {
