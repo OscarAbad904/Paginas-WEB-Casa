@@ -142,6 +142,28 @@ setupTouch();
 // Focus inicial en el canvas para teclado
 canvas.addEventListener('pointerdown', ()=> canvas.focus(), {passive:true});
 canvas.tabIndex = 0;
+// Escalar la interfaz para ajustarla a la ventana
+const appEl = document.getElementById('app');
+function resizeGame(){
+  // restablecer dimensiones originales
+  appEl.style.transform = 'none';
+  appEl.style.position = 'static';
+  appEl.style.margin = '0 auto';
+  appEl.style.left = '';
+  appEl.style.top = '';
+  const baseWidth = appEl.offsetWidth;
+  const baseHeight = appEl.offsetHeight;
+  const scale = Math.min(window.innerWidth / baseWidth, window.innerHeight / baseHeight);
+  appEl.style.transform = `scale(${scale})`;
+  appEl.style.transformOrigin = 'top left';
+  appEl.style.position = 'absolute';
+  appEl.style.left = `${(window.innerWidth - baseWidth * scale) / 2}px`;
+  appEl.style.top = `${(window.innerHeight - baseHeight * scale) / 2}px`;
+  appEl.style.margin = '0';
+}
+window.addEventListener('resize', resizeGame);
+resizeGame();
+
 canvas.focus();
 
 // Iniciar
