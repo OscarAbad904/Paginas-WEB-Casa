@@ -23,7 +23,7 @@ export class Renderer {
   }
 
   setFlash(rows, duration=120){
-    this.flashRows = { rows:new Set(rows), t:duration };
+    this.flashRows = { rows:new Set(rows), t:duration, d:duration };
   }
   tickFlash(dt){
     if (!this.flashRows) return;
@@ -55,7 +55,7 @@ export class Renderer {
     for (let y=HIDDEN_ROWS; y<ROWS; y++){
       for (let x=0; x<COLS; x++){
         const v = board[y][x];
-        const flash = this.flashRows && this.flashRows.rows.has(y);
+        const flash = this.flashRows && this.flashRows.rows.has(y) ? this.flashRows.t / this.flashRows.d : 0;
         this.drawCell(x, y-HIDDEN_ROWS, v, cell, flash);
       }
     }
@@ -101,7 +101,7 @@ export class Renderer {
     ctx.restore();
   }
 
-  drawCell(x, yVis, v, cell, flash){
+  drawCell(x, yVis, v, cell, flash=0){
     const ctx = this.ctx;
     const xpx = Math.floor((this.canvas.width - cell*COLS)/2) + x*cell;
     const ypx = this.scaleCache.offY + yVis*cell;
@@ -115,18 +115,24 @@ export class Renderer {
     }
   }
 
-  drawRect(x, y, size, kind, flash=false){
+  drawRect(x, y, size, kind, flash=0){
     const ctx = this.ctx;
     const c = getCss(colorVar[kind] || '--panel');
     ctx.save();
-    // base
+    if (flash > 0){
+      ctx.shadowBlur = 20 * flash;
+      ctx.shadowColor = 'rgba(255,255,255,' + (0.7*flash) + ')';
+    }
     ctx.fillStyle = c;
     ctx.fillRect(x, y, size, size);
-    // borde sutil
-    ctx.strokeStyle = flash ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.08)';
+    const grad = ctx.createLinearGradient(x, y, x, y + size);
+    grad.addColorStop(0, 'rgba(255,255,255,0.15)');
+    grad.addColorStop(1, 'rgba(0,0,0,0.25)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(x, y, size, size);
+    ctx.strokeStyle = 'rgba(255,255,255,' + (0.08 + 0.6*flash) + ')';
     ctx.strokeRect(x+0.5, y+0.5, size-1, size-1);
-    // highlight leve
-    ctx.globalAlpha = flash ? 0.5 : 0.12;
+    ctx.globalAlpha = 0.15 + 0.35*flash;
     ctx.fillStyle = '#fff';
     ctx.fillRect(x+2, y+2, size-4, Math.max(2, size*0.18));
     ctx.restore();
@@ -194,12 +200,20 @@ export class Renderer {
 
   drawMiniRect(ctx, x, y, s, kind){
     const c = getCss(colorVar[kind] || '--panel');
+    ctx.save();
     ctx.fillStyle = c;
     ctx.fillRect(x,y,s,s);
-    ctx.strokeStyle = 'rgba(255,255,255,.08)';
+    const grad = ctx.createLinearGradient(x,y,x,y+s);
+    grad.addColorStop(0,'rgba(255,255,255,0.15)');
+    grad.addColorStop(1,'rgba(0,0,0,0.25)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(x,y,s,s);
+    ctx.strokeStyle = 'rgba(255,255,255,.1)';
     ctx.strokeRect(x+0.5,y+0.5,s-1,s-1);
-    ctx.globalAlpha = 0.12; ctx.fillStyle='#fff';
-    ctx.fillRect(x+2,y+2,s-4,Math.max(2,s*0.18)); ctx.globalAlpha=1;
+    ctx.globalAlpha = 0.15;
+    ctx.fillStyle='#fff';
+    ctx.fillRect(x+2,y+2,s-4,Math.max(2,s*0.18));
+    ctx.restore();
   }
 }
 
