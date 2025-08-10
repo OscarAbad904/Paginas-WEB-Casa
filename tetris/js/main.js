@@ -154,6 +154,12 @@ function resizeGame(){
   const baseWidth = appEl.offsetWidth;
   const baseHeight = appEl.offsetHeight;
   const scale = Math.min(window.innerWidth / baseWidth, window.innerHeight / baseHeight);
+  appEl.style.transform = `scale(${scale})`;
+  appEl.style.transformOrigin = 'top left';
+  appEl.style.position = 'absolute';
+  appEl.style.left = `${(window.innerWidth - baseWidth * scale) / 2}px`;
+  appEl.style.top = `${(window.innerHeight - baseHeight * scale) / 2}px`;
+  appEl.style.margin = '0';
   if (scale < 1){
     appEl.style.transform = `scale(${scale})`;
     appEl.style.transformOrigin = 'top left';
