@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Tetris Vanilla</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <link rel="stylesheet" href="./css/styles.css" />
+</head>
+<body>
+  <main id="app" role="application" aria-label="Tetris">
+    <section class="game">
+      <canvas id="game-canvas" width="320" height="640" aria-label="Lienzo del juego" tabindex="0"></canvas>
+
+      <div id="overlay" class="overlay hidden" aria-hidden="true">
+        <div class="overlay-card" role="dialog" aria-modal="true" aria-labelledby="overlay-title">
+          <h2 id="overlay-title">Pausa</h2>
+          <p id="overlay-sub">Pulsa <kbd>P</kbd> para continuar</p>
+          <button id="btn-resume" class="btn" aria-label="Reanudar">Reanudar</button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel" aria-label="Panel de control">
+      <header class="brand">
+        <h1>Tetris</h1>
+        <button id="btn-mute" class="btn icon" aria-pressed="false" aria-label="Silenciar o activar sonido">🔊</button>
+      </header>
+
+      <div class="stats">
+        <div class="stat"><span>Puntuación</span><strong id="score">0</strong></div>
+        <div class="stat"><span>Nivel</span><strong id="level">1</strong></div>
+        <div class="stat"><span>Líneas</span><strong id="lines">0</strong></div>
+      </div>
+
+      <div class="side-group">
+        <h2>Próximas</h2>
+        <div id="next-list" class="mini-list" aria-label="Cola de próximas piezas"></div>
+      </div>
+
+      <div class="side-group">
+        <h2>Hold</h2>
+        <canvas id="hold-canvas" class="mini" width="96" height="96" aria-label="Pieza en hold"></canvas>
+      </div>
+
+      <div class="side-group">
+        <h2>High Scores</h2>
+        <ol id="highscores" class="scores" aria-label="Mejores puntuaciones"></ol>
+        <div class="row">
+          <button id="btn-reset-scores" class="btn" aria-label="Borrar mejores puntuaciones">Borrar</button>
+          <button id="btn-restart" class="btn" aria-label="Reiniciar partida">Reiniciar</button>
+        </div>
+      </div>
+
+      <details class="help">
+        <summary>Controles</summary>
+        <ul>
+          <li>←/→ mover</li>
+          <li>↓ soft drop</li>
+          <li>Espacio hard drop</li>
+          <li>Z / X rotar (anti / horario)</li>
+          <li>C Hold</li>
+          <li>P Pausa · R Reiniciar</li>
+        </ul>
+      </details>
+
+      <div id="live" class="visually-hidden" aria-live="polite"></div>
+    </aside>
+  </main>
+
+  <!-- Controles táctiles -->
+  <nav id="touch" class="touch" aria-label="Controles táctiles">
+    <button class="tbtn" id="t-left"  aria-label="Mover a la izquierda">◀</button>
+    <button class="tbtn" id="t-right" aria-label="Mover a la derecha">▶</button>
+    <button class="tbtn" id="t-rot-l" aria-label="Rotar antihorario">⟲</button>
+    <button class="tbtn" id="t-rot-r" aria-label="Rotar horario">⟳</button>
+    <button class="tbtn" id="t-down"  aria-label="Soft drop">▼</button>
+    <button class="tbtn" id="t-hard"  aria-label="Hard drop">⤓</button>
+    <button class="tbtn" id="t-hold"  aria-label="Hold">H</button>
+    <button class="tbtn" id="t-pause" aria-label="Pausa">⏸</button>
+  </nav>
+
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>

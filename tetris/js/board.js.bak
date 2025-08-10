@@ -1,0 +1,105 @@
+"use strict";
+// Usar window.TETRIS_UTILS.CONST y window.TETRIS_UTILS.create2D directamente
+
+class Board {
+  constructor(rows=window.TETRIS_UTILS.CONST.ROWS, cols=window.TETRIS_UTILS.CONST.COLS){
+    this.rows = rows; this.cols = cols;
+    this.grid = window.TETRIS_UTILS.create2D(rows, cols, 0);
+    this.clearAnim = null;
+  }
+
+  reset(){ for(let y=0;y<this.rows;y++) this.grid[y].fill(0); this.clearAnim=null; }
+
+  inBounds(x,y){ return x>=0 && x<this.cols && y>=0 && y<this.rows; }
+
+  collides(piece){
+    const m = piece.matrix;
+    for(let y=0;y<4;y++){
+      for(let x=0;x<4;x++){
+        if(!m[y][x]) continue;
+          const gx = piece.x + x;
+          const gy = piece.y + y;
+          if(gx<0 || gx>=this.cols || gy>=this.rows) return true;
+          if(gy>=0 && this.grid[gy][gx]) return true;
+        }
+      }
+      return false;
+    }
+  
+    lockPiece(piece){
+      const m = piece.matrix; let overflow=false;
+      for(let y=0;y<4;y++) for(let x=0;x<4;x++){
+        const v = m[y][x]; if(!v) continue;
+        const gx = piece.x + x, gy = piece.y + y;
+        if(gy<0) { overflow = true; continue; }
+        this.grid[gy][gx] = v;
+      }
+      return overflow;
+    }
+  
+    getFullRows(){
+      const full=[]; for(let y=0;y<this.rows;y++){
+        let all=true; for(let x=0;x<this.cols;x++){ if(this.grid[y][x]===0){ all=false; break; } }
+        if(all) full.push(y);
+      }
+      return full;
+    }
+  
+    startClearAnimation(rows){
+      this.clearAnim = { rows, tStart: performance.now(), duration: 120 };
+    }
+  
+    commitClear(){
+      const rows = this.clearAnim?.rows || [];
+      rows.sort((a,b)=>a-b);
+      for(const y of rows){ this.grid.splice(y,1); this.grid.unshift(new Array(this.cols).fill(0)); }
+      this.clearAnim = null;
+    }
+  }
+
+    for(let y=0;y<4;y++){
+      for(let x=0;x<4;x++){
+        if(!m[y][x]) continue;
+        const gx = piece.x + x;
+        const gy = piece.y + y;
+        if(gx<0 || gx>=this.cols || gy>=this.rows) return true;
+        if(gy>=0 && this.grid[gy][gx]) return true;
+      }
+    }
+    return false;
+  }
+
+  lockPiece(piece){
+    const m = piece.matrix; let overflow=false;
+    for(let y=0;y<4;y++) for(let x=0;x<4;x++){
+      const v = m[y][x]; if(!v) continue;
+      const gx = piece.x + x, gy = piece.y + y;
+      if(gy<0) { overflow = true; continue; }
+      this.grid[gy][gx] = v;
+    }
+    return overflow;
+  }
+
+  getFullRows(){
+    const full=[]; for(let y=0;y<this.rows;y++){
+      let all=true; for(let x=0;x<this.cols;x++){ if(this.grid[y][x]===0){ all=false; break; } }
+      if(all) full.push(y);
+    }
+    return full;
+  }
+
+  startClearAnimation(rows){
+    this.clearAnim = { rows, tStart: performance.now(), duration: 120 };
+  }
+
+  commitClear(){
+    const rows = this.clearAnim?.rows || [];
+    rows.sort((a,b)=>a-b);
+    for(const y of rows){ this.grid.splice(y,1); this.grid.unshift(new Array(this.cols).fill(0)); }
+    this.clearAnim = null;
+  }
+}
+
+  }
+
+window.TETRIS_BOARD = { Board };
