@@ -118,18 +118,18 @@ export class Renderer {
   drawRect(x, y, size, kind, flash=false){
     const ctx = this.ctx;
     const c = getCss(colorVar[kind] || '--panel');
+    ctx.save();
     // base
     ctx.fillStyle = c;
     ctx.fillRect(x, y, size, size);
     // borde sutil
-    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-    if (flash) ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+    ctx.strokeStyle = flash ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.08)';
     ctx.strokeRect(x+0.5, y+0.5, size-1, size-1);
     // highlight leve
     ctx.globalAlpha = flash ? 0.5 : 0.12;
     ctx.fillStyle = '#fff';
     ctx.fillRect(x+2, y+2, size-4, Math.max(2, size*0.18));
-    ctx.globalAlpha = 1;
+    ctx.restore();
   }
 
   // Mini canvases (hold y next)

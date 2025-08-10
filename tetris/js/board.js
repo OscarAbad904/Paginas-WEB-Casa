@@ -66,12 +66,12 @@ export function fullRows(board) {
 // Compacta eliminando filas completas y añadiendo filas 0 arriba.
 // Devuelve número de líneas eliminadas.
 export function clearRows(board, rows) {
-  let count = 0;
-  for (const ry of rows) {
-    board.splice(ry - count, 1);
-    const newRow = new Array(COLS).fill(0);
-    board.unshift(newRow);
-    count++;
+  const ordered = [...rows].sort((a, b) => b - a);
+  for (const ry of ordered) {
+    board.splice(ry, 1);
   }
-  return count;
+  for (let i = 0; i < ordered.length; i++) {
+    board.unshift(new Array(COLS).fill(0));
+  }
+  return ordered.length;
 }
