@@ -24,6 +24,7 @@ body{
   margin:0; background:var(--bg); color:var(--text);
   font:500 16px/1.4 system-ui,Segoe UI,Roboto,Arial,sans-serif;
   -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  overflow:hidden;
 }
 
 #app{
