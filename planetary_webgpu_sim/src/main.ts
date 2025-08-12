@@ -101,10 +101,25 @@ function onResize() {
   renderer.resizeDepth(canvas.width, canvas.height);
 }
 
+async function readBufferF32(src: GPUBuffer, floats: number) {
+  const size = floats * 4;
+  const dst = device.createBuffer({
+    size,
+    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+  });
+  const encoder = device.createCommandEncoder();
+  encoder.copyBufferToBuffer(src, 0, dst, 0, size);
+  device.queue.submit([encoder.finish()]);
+  await dst.mapAsync(GPUMapMode.READ);
+  const copy = dst.getMappedRange().slice(0);
+  dst.unmap();
+  dst.destroy();
+  return new Float32Array(copy);
+}
+
 async function fitCameraToParticles() {
   if (!sim || !device) return;
-  const buf = new Float32Array(N * 4);
-  await device.queue.readBuffer(sim.posType, 0, buf);
+  const buf = await readBufferF32(sim.posType, N * 4);
   let minX = Infinity, minY = Infinity, minZ = Infinity;
   let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
   for (let i = 0; i < N; i++) {
@@ -168,10 +183,8 @@ async function main() {
     onReset: () => resetSim(),
     onExport: async () => {
       // leer buffers a CPU
-      const posR = new Float32Array(N*4);
-      const velR = new Float32Array(N*4);
-      await device.queue.readBuffer(sim.posType, 0, posR.buffer);
-      await device.queue.readBuffer(sim.velMass, 0, velR.buffer);
+      const posR = await readBufferF32(sim.posType, N * 4);
+      const velR = await readBufferF32(sim.velMass, N * 4);
       const rows = [];
       for (let i=0;i<N;i++) {
         rows.push({ x: posR[4*i+0], y: posR[4*i+1], z: posR[4*i+2], vx: velR[4*i+0], vy: velR[4*i+1], vz: velR[4*i+2], m: velR[4*i+3], type: posR[4*i+3] });
