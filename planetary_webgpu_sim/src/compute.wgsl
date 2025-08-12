@@ -10,18 +10,11 @@ struct SimParams {
   enableGas: u32,
   enableDrag: u32,
   enableCollisions: u32,
-  pad: u32
-  } else {
-    for (var j: u32 = 0u; j < arrayLength(&pos_type); j = j + 1u) {
-      if (i == j || aux[j].z < 0.5) { continue; }
-      let rvec = pos_type[j].xyz - Pi;
-      let r2 = dot(rvec, rvec) + eps2;
-      let invr3 = inverseSqrt(r2*r2*r2);
-      let mj = vel_mass[j].w;
-      a += params.G * mj * rvec * invr3;
-      phi += - params.G * mj / sqrt(r2);
-    }
-  }
+  pad: u32,
+  rhoThresh: f32,
+  vMax: f32,
+  theta: f32
+};
 
 @group(0) @binding(0) var<uniform> params: SimParams;
 

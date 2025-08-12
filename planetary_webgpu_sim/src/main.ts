@@ -108,7 +108,7 @@ function onResize() {
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   canvas.width = Math.floor(canvas.clientWidth * dpr);
   canvas.height = Math.floor(canvas.clientHeight * dpr);
-  renderer.resizeDepth(canvas.width, canvas.height);
+  renderer.resize(canvas.width, canvas.height);
 }
 
 async function readBufferF32(src: GPUBuffer, floats: number) {
@@ -192,7 +192,8 @@ async function autoFrameCamera() {
   const rx=0.5*(maxx-minx), ry=0.5*(maxy-miny), rz=0.5*(maxz-minz);
   const r = Math.max(0.5, Math.max(rx, Math.max(ry, rz)));
   const desired = Math.max(2.0, r*3.0);
-  camera.setTargetDistance([cx,cy,cz] as any, desired);
+  camera.target = [cx, cy, cz] as [number, number, number];
+  camera.distance = desired;
 }
 function frame() {
 

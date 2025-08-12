@@ -2,10 +2,10 @@
 export class Renderer {
   device: GPUDevice;
   format: GPUTextureFormat;
-  pipeline: GPURenderPipeline;
-  cameraBuf: GPUBuffer;
-  bindGroup: GPUBindGroup;
-  vertexBuf: GPUBuffer;
+  pipeline!: GPURenderPipeline;
+  cameraBuf!: GPUBuffer;
+  bindGroup!: GPUBindGroup;
+  vertexBuf!: GPUBuffer;
 
   constructor(device: GPUDevice, format: GPUTextureFormat) {
     this.device = device;
@@ -70,4 +70,8 @@ export class Renderer {
     pass.draw(6, nInstances);
     pass.end();
   }
+
+    resize(width: number, height: number) {
+      // Método vacío para compatibilidad. Implementar si es necesario.
+    }
 }

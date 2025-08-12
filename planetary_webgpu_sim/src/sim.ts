@@ -11,6 +11,7 @@ export class Simulation {
   pipelineForces!: GPUComputePipeline;
   pipelineIntegrate!: GPUComputePipeline;
   pipelineCollisions!: GPUComputePipeline;
+  pipelineClassify!: GPUComputePipeline;
   bindGroup!: GPUBindGroup;
   uniform!: GPUBuffer;
   posType!: GPUBuffer;
@@ -32,7 +33,7 @@ export class Simulation {
     this.velMass = createBuffer(this.device, velMass.byteLength, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC, 'velMass');
     this.aux = createBuffer(this.device, aux.byteLength, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC, 'aux');
     this.accel = createBuffer(this.device, this.n*4*4, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST, 'accel');
-    this.metricsBuf = createBuffer(this.device, 4*8, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST, 'metrics');
+  // this.metricsBuf = createBuffer(this.device, 4*8, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST, 'metrics');
     this.uniform = createBuffer(this.device, U_SIZE, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'uniform');
 
     this.device.queue.writeBuffer(this.posType, 0, particles.slice().buffer);
@@ -56,10 +57,11 @@ export class Simulation {
       { binding:3, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } },
     ]});
     const pipelineLayout = this.device.createPipelineLayout({ bindGroupLayouts: [layout, bhLayout] });
-    this.pipelineDensity = this.device.createComputePipeline({ layout: pipelineLayout, compute: { module, entryPoint: 'compute_density' }});
-    this.pipelineForces = this.device.createComputePipeline({ layout: pipelineLayout, compute: { module, entryPoint: 'compute_forces' }});
-    this.pipelineIntegrate = this.device.createComputePipeline({ layout: pipelineLayout, compute: { module, entryPoint: 'integrate' }});
-    this.pipelineCollisions = this.device.createComputePipeline({ layout: pipelineLayout, compute: { module, entryPoint: 'collisions' }});
+  this.pipelineDensity = this.device.createComputePipeline({ layout: pipelineLayout, compute: { module, entryPoint: 'compute_density' }});
+  this.pipelineForces = this.device.createComputePipeline({ layout: pipelineLayout, compute: { module, entryPoint: 'compute_forces' }});
+  this.pipelineIntegrate = this.device.createComputePipeline({ layout: pipelineLayout, compute: { module, entryPoint: 'integrate' }});
+  this.pipelineCollisions = this.device.createComputePipeline({ layout: pipelineLayout, compute: { module, entryPoint: 'collisions' }});
+  this.pipelineClassify = this.device.createComputePipeline({ layout: pipelineLayout, compute: { module, entryPoint: 'classify_planetesimals' }});
 
     this.bindGroup = this.device.createBindGroup({
       layout,
@@ -69,7 +71,6 @@ export class Simulation {
         { binding: 2, resource: { buffer: this.velMass }},
         { binding: 3, resource: { buffer: this.aux }},
         { binding: 4, resource: { buffer: this.accel }},
-        { binding: 5, resource: { buffer: this.metricsBuf }},
       ]
     });
 
@@ -144,18 +145,11 @@ export class Simulation {
     pass4.dispatchWorkgroups(nWg);
     pass4.end();
 
-    const pass5 = encoder.beginComputePass();
-    pass5.setPipeline(this.pipelineClassify);
-    pass5.setBindGroup(0, this.bindGroup);
-    if (this.bhBindGroup) pass5.setBindGroup(1, this.bhBindGroup);
-    pass5.dispatchWorkgroups(nWg);
-    pass5.end();
-
-    const pass6 = encoder.beginComputePass();
-    pass6.setPipeline(this.pipelineMetrics);
-    pass6.setBindGroup(0, this.bindGroup);
-    if (this.bhBindGroup) pass6.setBindGroup(1, this.bhBindGroup);
-    pass6.dispatchWorkgroups(nWg);
-    pass6.end();
+  const pass5 = encoder.beginComputePass();
+  pass5.setPipeline(this.pipelineClassify);
+  pass5.setBindGroup(0, this.bindGroup);
+  if (this.bhBindGroup) pass5.setBindGroup(1, this.bhBindGroup);
+  pass5.dispatchWorkgroups(nWg);
+  pass5.end();
   }
 }

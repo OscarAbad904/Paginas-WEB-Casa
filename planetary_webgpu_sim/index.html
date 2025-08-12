@@ -155,14 +155,9 @@
       </div>
     </main>
   </div>
-    <!-- Usar Vite para importar el entrypoint TypeScript -->
-    <script type="module" src="./src/main.ts"></script>
-    <!-- Favicon de ejemplo -->
-    <link rel="icon" type="image/png" href="./favicon.png">
-    <!-- Asegurar que Vite está disponible -->
-    <script type="module">
-      import { createApp } from './src/main.ts'
-      createApp()
-    </script>
+  <!-- Usar Vite: la entrada es src/main.ts, Vite lo resuelve automáticamente -->
+  <script type="module" src="/src/main.ts"></script>
+  <!-- Favicon de ejemplo -->
+  <link rel="icon" type="image/png" href="./favicon.png">
   </body>
   </html>
