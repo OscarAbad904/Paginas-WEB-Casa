@@ -1,17 +1,26 @@
 export type SimParams = {
   G: number;
   eps: number;      // softening
+  theta: number;     // BH opening angle
   gamma: number;    // gas
   kpress: number;   // gas equation constant
   hKernel: number;  // SPH smoothing length
   nu: number;       // artificial viscosity magnitude
   tau: number;      // stopping time for drag
+  rhoThresh: number; // density threshold for planetesimal
+  vMax: number;      // velocity clamp
+  gravMode: GravMode;
+  quality: Quality;
+  autoReduceN: boolean;
   dtMax: number;
   warp: number;
   enableGas: boolean;
   enableDrag: boolean;
   enableCollisions: boolean;
 };
+
+export type GravMode = 'auto'|'bh'|'n2';
+export type Quality = 'low'|'med'|'high';
 
 export type PresetName = "nube_rotacion" | "disco_kepler" | "polvo_alto";
 

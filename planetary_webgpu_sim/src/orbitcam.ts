@@ -22,6 +22,43 @@ export class OrbitCamera {
     }, { passive: true });
   }
 
+  adjustToParticles(positions: Float32Array) {
+    // Calcular el centro y radio de la distribución de partículas
+    let minX = Infinity, maxX = -Infinity;
+    let minY = Infinity, maxY = -Infinity;
+    let minZ = Infinity, maxZ = -Infinity;
+    
+    for (let i = 0; i < positions.length; i += 4) {
+      const x = positions[i];
+      const y = positions[i + 1];
+      const z = positions[i + 2];
+      
+      minX = Math.min(minX, x);
+      maxX = Math.max(maxX, x);
+      minY = Math.min(minY, y);
+      maxY = Math.max(maxY, y);
+      minZ = Math.min(minZ, z);
+      maxZ = Math.max(maxZ, z);
+    }
+    
+    // Actualizar el punto objetivo al centro de la distribución
+    this.target = [
+      (minX + maxX) / 2,
+      (minY + maxY) / 2,
+      (minZ + maxZ) / 2
+    ];
+    
+    // Ajustar la distancia para que todas las partículas sean visibles
+    const radius = Math.max(
+      maxX - minX,
+      maxY - minY,
+      maxZ - minZ
+    ) / 2;
+    
+    // Añadir un margen del 20% para asegurar que todas las partículas sean visibles
+    this.distance = radius * 2.4;
+  }
+
   viewProj(aspect: number): Float32Array {
     const eye = [
       this.target[0] + this.distance * Math.sin(this.phi) * Math.cos(this.theta),

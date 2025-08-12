@@ -11,7 +11,17 @@ struct SimParams {
   enableDrag: u32,
   enableCollisions: u32,
   pad: u32
-}
+  } else {
+    for (var j: u32 = 0u; j < arrayLength(&pos_type); j = j + 1u) {
+      if (i == j || aux[j].z < 0.5) { continue; }
+      let rvec = pos_type[j].xyz - Pi;
+      let r2 = dot(rvec, rvec) + eps2;
+      let invr3 = inverseSqrt(r2*r2*r2);
+      let mj = vel_mass[j].w;
+      a += params.G * mj * rvec * invr3;
+      phi += - params.G * mj / sqrt(r2);
+    }
+  }
 
 @group(0) @binding(0) var<uniform> params: SimParams;
 
@@ -24,6 +34,18 @@ struct SimParams {
 @group(0) @binding(3) var<storage, read_write> aux: array<vec4<f32>>;
 // acceleration temp
 @group(0) @binding(4) var<storage, read_write> accel: array<vec4<f32>>;
+
+// Barnes–Hut nodes (quadtree XZ), bound at group(1)
+@group(1) @binding(0) var<storage, read> bh_nodesA: array<vec4<f32>>; // [cx, cz, half, mass]
+@group(1) @binding(1) var<storage, read> bh_nodesB: array<vec4<f32>>; // [mx, mz, 0, 0]
+@group(1) @binding(2) var<storage, read> bh_children: array<vec4<u32>>;
+@group(1) @binding(3) var<uniform> bh_info: vec2<u32>; // [nodeCount, useBH]
+
+
+// metrics buffers
+// metricsOut: [K, U, Lx, Ly, Lz, countPlanetesimals, countAlive, totalMass]
+@group(0) @binding(5) var<storage, read_write> metricsOut: array<atomic<i32>>;
+
 
 fn W_poly6(r: f32, h: f32) -> f32 {
   if (r >= 0.0 && r <= h) {
@@ -74,6 +96,7 @@ fn compute_forces(@builtin(global_invocation_id) gid: vec3<u32>) {
   let ti = pos_type[i].w;
 
   var a = vec3<f32>(0.0);
+  var phi = 0.0;
   let eps2 = params.eps * params.eps;
   // Gravedad O(N^2)
   for (var j: u32 = 0u; j < arrayLength(&pos_type); j = j + 1u) {
@@ -81,7 +104,9 @@ fn compute_forces(@builtin(global_invocation_id) gid: vec3<u32>) {
     let rvec = pos_type[j].xyz - Pi;
     let r2 = dot(rvec, rvec) + eps2;
     let invr3 = inverseSqrt(r2*r2*r2);
-    a += params.G * vel_mass[j].w * rvec * invr3;
+    let mj = vel_mass[j].w;
+    a += params.G * mj * rvec * invr3;
+    phi += - params.G * mj / sqrt(r2);
   }
 
   if (params.enableGas != 0u) {
@@ -131,7 +156,7 @@ fn compute_forces(@builtin(global_invocation_id) gid: vec3<u32>) {
     }
   }
 
-  accel[i] = vec4<f32>(a, 0.0);
+  accel[i] = vec4<f32>(a, phi);
 }
 
 // Pass 3: integración leapfrog/Verlet (semi-impl)
@@ -147,6 +172,13 @@ fn integrate(@builtin(global_invocation_id) gid: vec3<u32>) {
   let a = accel[i].xyz;
 
   // velocity Verlet (simplificado): v_{t+dt} = v + a*dt ; p_{t+dt} = p + v_{t+dt}*dt
+  // clamp velocidad para estabilidad
+  let speed = length(v + a*dt);
+  if (speed > params.vMax) {
+    v = (v + a*dt) * (params.vMax / speed);
+  } else {
+    v = v + a*dt;
+  }
   v = v + a * dt;
   p = p + v * dt;
 
@@ -185,9 +217,78 @@ fn collisions(@builtin(global_invocation_id) gid: vec3<u32>) {
       vel_mass[i].y = newV.y;
       vel_mass[i].z = newV.z;
       // crecer radio proporcional a m^(1/3)
-      aux[i].w = pow(newM, 1.0/3.0)*0.05;
+      aux[i].w = min(0.5, pow(newM, 1.0/3.0)*0.05);
       // marcar j como muerto
       aux[j].z = 0.0;
     }
   }
+}
+
+
+// Pass 5: clasifica sólidos densos como planetesimales
+@compute @workgroup_size(256)
+fn classify_planetesimals(@builtin(global_invocation_id) gid: vec3<u32>) {
+  let i = gid.x;
+  if (i >= arrayLength(&pos_type)) { return; }
+  if (aux[i].z < 0.5) { return; }
+  let ti = pos_type[i].w;
+  if (ti > 0.5 && ti < 1.5) { // sólido
+    if (aux[i].x >= params.rhoThresh) {
+      pos_type[i].w = 2.0; // planetesimal
+      aux[i].w = max(aux[i].w, 0.08);
+      // contar planetesimal
+      atomicAdd(&metricsOut[5], 1);
+    }
+  }
+}
+
+fn bh_force(i: u32, theta: f32) -> vec4<f32> {
+  // return vec4(acc.xyz, phi)
+  let Pi = pos_type[i].xyz;
+  var a = vec3<f32>(0.0);
+  var phi = 0.0;
+  var stack: array<i32, 64>;
+  var sp: i32 = 0;
+  stack[sp] = 0; sp += 1; // root
+  let eps2 = params.eps * params.eps;
+
+  loop {
+    if (sp <= 0) { break; }
+    sp -= 1;
+    let ni = stack[sp];
+    if (ni < 0) { continue; }
+    let n = u32(ni);
+    if (n >= bh_info.x) { continue; }
+
+    let A = bh_nodesA[n];
+    let B = bh_nodesB[n];
+    let cx = A.x; let cz = A.y; let half = A.z; let m = A.w;
+    if (m <= 0.0) { continue; }
+    let com = vec3<f32>(B.x, 0.0, B.y);
+    let rvec = com - Pi;
+    let r2 = dot(rvec, rvec) + eps2;
+    let d = sqrt(r2);
+
+    // opening criterion: s/d < theta
+    let s = half * 2.0;
+    if (s / max(d, 1e-4) < theta || half < 1e-3) {
+      let invr3 = inverseSqrt(r2*r2*r2);
+      a += params.G * m * rvec * invr3;
+      phi += - params.G * m / sqrt(r2);
+      continue;
+    } else {
+      // push children
+      let ch = bh_children[n];
+      if (ch.x != 0xffffffffu) { stack[sp] = i32(ch.x); sp += 1; }
+      if (ch.y != 0xffffffffu) { stack[sp] = i32(ch.y); sp += 1; }
+      if (ch.z != 0xffffffffu) { stack[sp] = i32(ch.z); sp += 1; }
+      if (ch.w != 0xffffffffu) { stack[sp] = i32(ch.w); sp += 1; }
+    }
+    if (sp >= 60) { /* overflow guard: treat node as mass */ 
+      let invr3 = inverseSqrt(r2*r2*r2);
+      a += params.G * m * rvec * invr3;
+      phi += - params.G * m / sqrt(r2);
+    }
+  }
+  return vec4<f32>(a, phi);
 }

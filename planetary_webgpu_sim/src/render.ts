@@ -1,4 +1,3 @@
-import { PARTICLE_STRIDE } from './buffers';
 
 export class Renderer {
   device: GPUDevice;
@@ -7,8 +6,6 @@ export class Renderer {
   cameraBuf: GPUBuffer;
   bindGroup: GPUBindGroup;
   vertexBuf: GPUBuffer;
-  depthTex: GPUTexture;
-  depthView: GPUTextureView;
 
   constructor(device: GPUDevice, format: GPUTextureFormat) {
     this.device = device;
@@ -18,22 +15,14 @@ export class Renderer {
   async init(particlesBuf: GPUBuffer, auxBuf: GPUBuffer, velMassBuf: GPUBuffer) {
     const module = this.device.createShaderModule({ code: await (await fetch('/src/render.wgsl')).text() });
 
-    // Fullscreen quad for billboard (we'll instance it per particle)
     const quad = new Float32Array([
       -1,-1,  1,-1,  -1, 1,
       -1, 1,  1,-1,   1, 1
     ]);
-    this.vertexBuf = this.device.createBuffer({
-      size: quad.byteLength,
-      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
-    });
+    this.vertexBuf = this.device.createBuffer({ size: quad.byteLength, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
     this.device.queue.writeBuffer(this.vertexBuf, 0, quad);
 
-    // Camera buffer
-    this.cameraBuf = this.device.createBuffer({
-      size: 16*4*4 + 4*4, // mat4 + pointSize + padding
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
-    });
+    this.cameraBuf = this.device.createBuffer({ size: 64+64+16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
 
     const layout = this.device.createBindGroupLayout({
       entries: [
@@ -56,39 +45,25 @@ export class Renderer {
 
     this.pipeline = this.device.createRenderPipeline({
       layout: this.device.createPipelineLayout({ bindGroupLayouts: [layout] }),
-      vertex: {
-        module,
-        entryPoint: 'vs_main',
-        buffers: [
-          { arrayStride: 2*4, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x2' }]}
-        ]
-      },
-      fragment: { module, entryPoint: 'fs_main', targets: [{ format: this.format, blend: { color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha' , operation: 'add'}, alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add'} } }]},
+      vertex: { module, entryPoint: 'vs_main', buffers: [{ arrayStride: 2*4, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x2' }]}] },
+      fragment: { module, entryPoint: 'fs_main', targets: [{ format: this.format, blend: { color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha', operation: 'add' }, alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' } } }]},
       primitive: { topology: 'triangle-list', cullMode: 'none' },
     });
-    this.resizeDepth(1280, 720);
   }
 
-  resizeDepth(w: number, h: number) {
-    if (this.depthTex) this.depthTex.destroy();
-    this.depthTex = this.device.createTexture({
-      size: { width: w, height: h },
-      format: 'depth24plus',
-      usage: GPUTextureUsage.RENDER_ATTACHMENT
-    });
-    this.depthView = this.depthTex.createView();
+  writeCamera(view: Float32Array, proj: Float32Array, pointSizePx: number, maxPointPx: number, viewport: [number, number]) {
+    const buf = new Float32Array(16 + 16 + 4);
+    buf.set(view, 0);
+    buf.set(proj, 16);
+    buf[32] = pointSizePx;
+    buf[33] = maxPointPx;
+    buf[34] = viewport[0];
+    buf[35] = viewport[1];
+    this.device.queue.writeBuffer(this.cameraBuf, 0, buf.buffer, 0, buf.byteLength);
   }
 
-  frame(encoder: GPUCommandEncoder, colorView: GPUTextureView, nInstances: number, viewProj: Float32Array, pointSize: number) {
-    this.device.queue.writeBuffer(this.cameraBuf, 0, viewProj.buffer, viewProj.byteOffset, viewProj.byteLength);
-    const tmp = new Float32Array(16+4);
-    tmp.set(viewProj, 0);
-    tmp[16] = pointSize;
-    this.device.queue.writeBuffer(this.cameraBuf, 0, tmp.buffer, 0, (16+4)*4);
-
-    const pass = encoder.beginRenderPass({
-      colorAttachments: [{ view: colorView, clearValue: { r: 0.05, g: 0.07, b: 0.11, a: 1 }, loadOp: 'clear', storeOp: 'store' }],
-    });
+  frame(encoder: GPUCommandEncoder, colorView: GPUTextureView, nInstances: number) {
+    const pass = encoder.beginRenderPass({ colorAttachments: [{ view: colorView, clearValue: { r: 0.05, g: 0.07, b: 0.11, a: 1 }, loadOp: 'clear', storeOp: 'store' }] });
     pass.setPipeline(this.pipeline);
     pass.setVertexBuffer(0, this.vertexBuf);
     pass.setBindGroup(0, this.bindGroup);

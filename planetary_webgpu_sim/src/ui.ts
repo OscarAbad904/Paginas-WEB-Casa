@@ -5,11 +5,17 @@ export function gatherParams(): SimParams {
   return {
     G: parseFloat(get('G').value),
     eps: parseFloat(get('eps').value),
+    theta: parseFloat(get('theta').value),
     gamma: parseFloat(get('gamma').value),
     kpress: parseFloat(get('kpress').value),
     hKernel: parseFloat(get('hKernel').value),
     nu: parseFloat(get('nu').value),
     tau: parseFloat(get('tau').value),
+    rhoThresh: parseFloat(get('rhoThresh').value),
+    vMax: parseFloat(get('vMax').value),
+    gravMode: (document.getElementById('gravMode') as HTMLSelectElement).value as any,
+    quality: (document.getElementById('quality') as HTMLSelectElement).value as any,
+    autoReduceN: (document.getElementById('autoReduceN') as HTMLInputElement).checked,
     dtMax: parseFloat(get('dtMax').value),
     warp: parseFloat((document.getElementById('warp') as HTMLSelectElement).value),
     enableGas: (document.getElementById('toggleGas') as HTMLInputElement).checked,
@@ -45,4 +51,10 @@ export function setHUD(values: { fps?: number; N?: number; dE?: number; dL?: num
   if (values.dE !== undefined) (document.getElementById('hudE')!).textContent = values.dE.toFixed(3);
   if (values.dL !== undefined) (document.getElementById('hudL')!).textContent = values.dL.toFixed(3);
   if (values.planets !== undefined) (document.getElementById('hudPlan')!).textContent = String(values.planets);
+}
+
+
+export function getAutoFrame(): boolean {
+  const el = document.getElementById('toggleAutoFrame') as HTMLInputElement | null;
+  return !!el?.checked;
 }

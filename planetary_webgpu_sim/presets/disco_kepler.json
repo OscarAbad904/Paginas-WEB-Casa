@@ -15,6 +15,12 @@
     "warp": 10,
     "enableGas": true,
     "enableDrag": true,
-    "enableCollisions": false
+    "enableCollisions": false,
+    "rhoThresh": 6.0,
+    "vMax": 10.0,
+    "theta": 0.6,
+    "gravMode": "auto",
+    "quality": "med",
+    "autoReduceN": true
   }
 }

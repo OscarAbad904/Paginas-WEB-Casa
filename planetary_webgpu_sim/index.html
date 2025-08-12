@@ -35,6 +35,7 @@
             <option value="nube_rotacion">Nube esférica</option>
             <option value="disco_kepler">Disco Kepleriano</option>
             <option value="polvo_alto">Polvo alto</option>
+            <option value="gtx1050">GTX 1050 Friendly</option>
           </select>
           <button id="btnLoadPreset">Cargar</button>
         </div>
@@ -53,6 +54,10 @@
         <div class="row">
           <label>G</label>
           <input id="G" type="number" step="0.0001" value="6.674e-3">
+        </div>
+        <div class="row">
+          <label>θ (BH)</label>
+          <input id="theta" type="number" step="0.05" value="0.6">
         </div>
         <div class="row">
           <label>ε (softening)</label>
@@ -92,10 +97,40 @@
         </div>
       </div>
       <div class="group toggles">
+        <label><input id="toggleAutoFrame" type="checkbox" checked> Auto-encuadre</label>
         <label><input id="toggleGas" type="checkbox" checked> Gas</label>
         <label><input id="toggleDrag" type="checkbox" checked> Arrastre (polvo↔gas)</label>
         <label><input id="toggleCollisions" type="checkbox"> Colisiones/Acreción</label>
       </div>
+      
+        <div class="row">
+          <label>ρ umbral (planetesimal)</label>
+          <input id="rhoThresh" type="number" step="0.01" value="6.0">
+        </div>
+        <div class="row">
+          <label>v máx (clamp)</label>
+          <input id="vMax" type="number" step="0.1" value="10.0">
+        </div>
+    
+      
+        <div class="row">
+          <label>Gravedad</label>
+          <select id="gravMode">
+            <option value="auto">Auto (BH si N≥3000)</option>
+            <option value="bh">Barnes–Hut</option>
+            <option value="n2">O(N²)</option>
+          </select>
+        </div>
+        <div class="row">
+          <label>Calidad</label>
+          <select id="quality">
+            <option value="low">Baja</option>
+            <option value="med" selected>Media</option>
+            <option value="high">Alta</option>
+          </select>
+        </div>
+        <div class="row"><label><input id="autoReduceN" type="checkbox" checked> Auto-reducir N si FPS baja</label></div>
+    
       <div class="group">
         <div class="row" style="gap:8px;">
           <button id="btnPlayPause">Pausa</button>
@@ -121,8 +156,13 @@
     </main>
   </div>
     <!-- Usar Vite para importar el entrypoint TypeScript -->
-    <script type="module" src="/src/main.ts"></script>
+    <script type="module" src="./src/main.ts"></script>
     <!-- Favicon de ejemplo -->
-    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="icon" type="image/png" href="./favicon.png">
+    <!-- Asegurar que Vite está disponible -->
+    <script type="module">
+      import { createApp } from './src/main.ts'
+      createApp()
+    </script>
   </body>
   </html>
