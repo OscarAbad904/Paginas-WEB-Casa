@@ -1,17 +1,17 @@
 struct SimParams {
-  G: f32;
-  eps: f32;
-  gamma: f32;
-  kpress: f32;
-  hKernel: f32;
-  nu: f32;
-  tau: f32;
-  dt: f32;
-  enableGas: u32;
-  enableDrag: u32;
-  enableCollisions: u32;
-  pad: u32;
-};
+  G: f32,
+  eps: f32,
+  gamma: f32,
+  kpress: f32,
+  hKernel: f32,
+  nu: f32,
+  tau: f32,
+  dt: f32,
+  enableGas: u32,
+  enableDrag: u32,
+  enableCollisions: u32,
+  pad: u32
+}
 
 @group(0) @binding(0) var<uniform> params: SimParams;
 
