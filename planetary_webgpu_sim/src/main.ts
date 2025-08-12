@@ -90,6 +90,7 @@ async function resetSim() {
   await renderer.init(sim.posType, sim.aux, sim.velMass);
   onResize();
   lastTime = performance.now();
+  await fitCameraToParticles();
 }
 
 function onResize() {
@@ -99,6 +100,49 @@ function onResize() {
   canvas.height = Math.floor(canvas.clientHeight * dpr);
   renderer.resizeDepth(canvas.width, canvas.height);
 }
+
+async function readBufferF32(src: GPUBuffer, floats: number) {
+  const size = floats * 4;
+  const dst = device.createBuffer({
+    size,
+    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+  });
+  const encoder = device.createCommandEncoder();
+  encoder.copyBufferToBuffer(src, 0, dst, 0, size);
+  device.queue.submit([encoder.finish()]);
+  await dst.mapAsync(GPUMapMode.READ);
+  const copy = dst.getMappedRange().slice(0);
+  dst.unmap();
+  dst.destroy();
+  return new Float32Array(copy);
+}
+
+async function fitCameraToParticles() {
+  if (!sim || !device) return;
+  const buf = await readBufferF32(sim.posType, N * 4);
+  let minX = Infinity, minY = Infinity, minZ = Infinity;
+  let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+  for (let i = 0; i < N; i++) {
+    const x = buf[4 * i + 0];
+    const y = buf[4 * i + 1];
+    const z = buf[4 * i + 2];
+    if (x < minX) minX = x; if (x > maxX) maxX = x;
+    if (y < minY) minY = y; if (y > maxY) maxY = y;
+    if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
+  }
+  camera.target = [
+    (minX + maxX) / 2,
+    (minY + maxY) / 2,
+    (minZ + maxZ) / 2
+  ];
+  const dx = maxX - minX;
+  const dy = maxY - minY;
+  const dz = maxZ - minZ;
+  const radius = Math.max(dx, dy, dz) * 0.5;
+  camera.distance = Math.max(radius * 2.5, 0.1);
+}
+
+setInterval(() => { fitCameraToParticles(); }, 1000);
 
 function frame() {
   const now = performance.now();
@@ -139,10 +183,8 @@ async function main() {
     onReset: () => resetSim(),
     onExport: async () => {
       // leer buffers a CPU
-      const posR = new Float32Array(N*4);
-      const velR = new Float32Array(N*4);
-      await device.queue.readBuffer(sim.posType, 0, posR.buffer);
-      await device.queue.readBuffer(sim.velMass, 0, velR.buffer);
+      const posR = await readBufferF32(sim.posType, N * 4);
+      const velR = await readBufferF32(sim.velMass, N * 4);
       const rows = [];
       for (let i=0;i<N;i++) {
         rows.push({ x: posR[4*i+0], y: posR[4*i+1], z: posR[4*i+2], vx: velR[4*i+0], vy: velR[4*i+1], vz: velR[4*i+2], m: velR[4*i+3], type: posR[4*i+3] });
