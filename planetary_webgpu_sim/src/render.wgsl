@@ -27,7 +27,9 @@ fn vs_main(@builtin(instance_index) inst: u32, @location(0) quadPos: vec2<f32>) 
   // Use quadPos in NDC-ish local quad and then multiply
   // We'll offset in clip space approx by using viewProj * (pos + offset)
   // Simpler: pass size to FS and compute circle in fragment.
-  out.pos = camera.viewProj * vec4<f32>(P.xyz, 1.0);
+  let clip = camera.viewProj * vec4<f32>(P.xyz, 1.0);
+  // Expand a small quad around the particle position in clip space
+  out.pos = clip + vec4<f32>(quadPos * s * clip.w, 0.0, 0.0);
   // Color by type and maybe density
   let t = P.w;
   var col: vec3<f32>;
