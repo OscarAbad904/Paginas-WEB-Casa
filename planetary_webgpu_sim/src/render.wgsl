@@ -12,6 +12,8 @@ struct VSOut {
   @builtin(position) pos: vec4<f32>,
   @location(0) color: vec3<f32>,
   @location(1) size: f32,
+  // Forward quad position to the fragment shader for circular sprite rendering
+  @location(2) quadPos: vec2<f32>,
 };
 
 @vertex
@@ -42,13 +44,14 @@ fn vs_main(@builtin(instance_index) inst: u32, @location(0) quadPos: vec2<f32>) 
   }
   out.color = col;
   out.size = s;
+  out.quadPos = quadPos;
   return out;
 }
 
 @fragment
-fn fs_main(in: VSOut, @location(0) quadPos: vec2<f32>) -> @location(0) vec4<f32> {
+fn fs_main(in: VSOut) -> @location(0) vec4<f32> {
   // Render a smooth circle sprite using quadPos in [-1,1]^2 generated in vertex buffer
-  let r2 = dot(quadPos, quadPos);
+  let r2 = dot(in.quadPos, in.quadPos);
   if (r2 > 1.0) {
     discard;
   }
