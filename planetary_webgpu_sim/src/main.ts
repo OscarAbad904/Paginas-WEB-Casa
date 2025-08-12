@@ -90,6 +90,7 @@ async function resetSim() {
   await renderer.init(sim.posType, sim.aux, sim.velMass);
   onResize();
   lastTime = performance.now();
+  await fitCameraToParticles();
 }
 
 function onResize() {
@@ -99,6 +100,34 @@ function onResize() {
   canvas.height = Math.floor(canvas.clientHeight * dpr);
   renderer.resizeDepth(canvas.width, canvas.height);
 }
+
+async function fitCameraToParticles() {
+  if (!sim || !device) return;
+  const buf = new Float32Array(N * 4);
+  await device.queue.readBuffer(sim.posType, 0, buf);
+  let minX = Infinity, minY = Infinity, minZ = Infinity;
+  let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+  for (let i = 0; i < N; i++) {
+    const x = buf[4 * i + 0];
+    const y = buf[4 * i + 1];
+    const z = buf[4 * i + 2];
+    if (x < minX) minX = x; if (x > maxX) maxX = x;
+    if (y < minY) minY = y; if (y > maxY) maxY = y;
+    if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
+  }
+  camera.target = [
+    (minX + maxX) / 2,
+    (minY + maxY) / 2,
+    (minZ + maxZ) / 2
+  ];
+  const dx = maxX - minX;
+  const dy = maxY - minY;
+  const dz = maxZ - minZ;
+  const radius = Math.max(dx, dy, dz) * 0.5;
+  camera.distance = Math.max(radius * 2.5, 0.1);
+}
+
+setInterval(() => { fitCameraToParticles(); }, 1000);
 
 function frame() {
   const now = performance.now();
