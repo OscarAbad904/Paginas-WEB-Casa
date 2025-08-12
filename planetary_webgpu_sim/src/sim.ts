@@ -39,10 +39,10 @@ export class Simulation {
     const layout = this.device.createBindGroupLayout({
       entries: [
         { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } },
-        { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-write-storage' } },
-        { binding: 2, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-write-storage' } },
-        { binding: 3, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-write-storage' } },
-        { binding: 4, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-write-storage' } },
+  { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+  { binding: 2, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+  { binding: 3, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+  { binding: 4, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
       ]
     });
 
