@@ -84,8 +84,9 @@ async function resetSim() {
     renderer = new Renderer(device, format);
     camera.attach(canvas);
   }
-  sim = new Simulation(device);
-  await sim.init(posType, velMass, aux, p);
+  const newSim = new Simulation(device);
+  await newSim.init(posType, velMass, aux, p);
+  sim = newSim;
   await renderer.init(sim.posType, sim.aux, sim.velMass);
   onResize();
   lastTime = performance.now();

@@ -19,7 +19,7 @@ export class OrbitCamera {
     });
     canvas.addEventListener('wheel', (e) => {
       this.distance *= Math.pow(1.1, e.deltaY * 0.01);
-    });
+    }, { passive: true });
   }
 
   viewProj(aspect: number): Float32Array {
