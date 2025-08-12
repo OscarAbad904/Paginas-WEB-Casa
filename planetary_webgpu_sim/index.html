@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simulación formación planetaria — WebGPU</title>
+  <style>
+    html, body { height: 100%; margin: 0; background: #0b0f16; color: #e9eef5; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';}
+    #app { display: grid; grid-template-columns: 280px 1fr; height: 100%; }
+    aside { padding: 12px 14px; border-right: 1px solid #1f2a3a; overflow: auto; background: #0f1520;}
+    main { position: relative; }
+    canvas { width: 100%; height: 100%; display: block; }
+    h1 { font-size: 16px; margin: 8px 0 12px; }
+    .group { margin: 10px 0; }
+    .row { display:flex; align-items:center; gap:8px; margin: 4px 0; }
+    label { font-size: 12px; color: #cbd5e1; }
+    input[type="range"]{ width: 100%; }
+    input[type="number"], select { width: 80px; background:#0b0f16; color:#cbd5e1; border:1px solid #334155; padding:2px 6px; }
+    button { background:#1e293b; color:#e2e8f0; border:1px solid #334155; padding:6px 10px; border-radius:6px; cursor:pointer; }
+    button:hover { background:#2a364a; }
+    .hud { position:absolute; top:8px; right:8px; background:rgba(10,14,20,0.7); padding:8px 10px; border-radius:8px; font-size:12px; }
+    .metric { display:flex; justify-content:space-between; gap:18px; }
+    .toggles label { display:flex; align-items:center; gap:6px; margin:4px 0; }
+    .preset { display:flex; gap:8px; margin: 8px 0; }
+    small.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; color:#94a3b8; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <aside>
+      <h1>Formación Planetaria (WebGPU)</h1>
+      <div class="group">
+        <div class="row preset">
+          <select id="preset">
+            <option value="nube_rotacion">Nube esférica</option>
+            <option value="disco_kepler">Disco Kepleriano</option>
+            <option value="polvo_alto">Polvo alto</option>
+          </select>
+          <button id="btnLoadPreset">Cargar</button>
+        </div>
+        <div class="row">
+          <label>Semilla</label>
+          <input id="seed" type="number" value="42">
+        </div>
+        <div class="row">
+          <label>N Partículas</label>
+          <input id="nParticles" type="number" value="4000">
+        </div>
+        <div class="row">
+          <label>Fracción gas</label>
+          <input id="gasFrac" type="number" min="0" max="1" step="0.05" value="0.7">
+        </div>
+        <div class="row">
+          <label>G</label>
+          <input id="G" type="number" step="0.0001" value="6.674e-3">
+        </div>
+        <div class="row">
+          <label>ε (softening)</label>
+          <input id="eps" type="number" step="0.0001" value="0.01">
+        </div>
+        <div class="row">
+          <label>γ (gas)</label>
+          <input id="gamma" type="number" step="0.1" value="1.4">
+        </div>
+        <div class="row">
+          <label>k (gas)</label>
+          <input id="kpress" type="number" step="0.01" value="1.0">
+        </div>
+        <div class="row">
+          <label>h (SPH)</label>
+          <input id="hKernel" type="number" step="0.001" value="0.08">
+        </div>
+        <div class="row">
+          <label>Viscosidad SPH</label>
+          <input id="nu" type="number" step="0.001" value="0.05">
+        </div>
+        <div class="row">
+          <label>τ (arrastre)</label>
+          <input id="tau" type="number" step="0.001" value="0.5">
+        </div>
+        <div class="row">
+          <label>dt máx.</label>
+          <input id="dtMax" type="number" step="0.0001" value="0.01">
+        </div>
+        <div class="row">
+          <label>Warp</label>
+          <select id="warp">
+            <option value="1">×1</option>
+            <option value="10">×10</option>
+            <option value="100">×100</option>
+          </select>
+        </div>
+      </div>
+      <div class="group toggles">
+        <label><input id="toggleGas" type="checkbox" checked> Gas</label>
+        <label><input id="toggleDrag" type="checkbox" checked> Arrastre (polvo↔gas)</label>
+        <label><input id="toggleCollisions" type="checkbox"> Colisiones/Acreción</label>
+      </div>
+      <div class="group">
+        <div class="row" style="gap:8px;">
+          <button id="btnPlayPause">Pausa</button>
+          <button id="btnReset">Reset</button>
+        </div>
+        <div class="row" style="gap:8px;">
+          <button id="btnExport">Exportar CSV</button>
+        </div>
+      </div>
+      <div class="group">
+        <small class="mono">Sugerido: N ≤ 8k para este modo O(N²). Barnes–Hut vendrá como mejora.</small>
+      </div>
+    </aside>
+    <main>
+      <canvas id="gfx"></canvas>
+      <div class="hud" id="hud">
+        <div class="metric"><span>FPS:</span><span id="fps">0</span></div>
+        <div class="metric"><span>N:</span><span id="hudN">0</span></div>
+        <div class="metric"><span>Energía |ΔE|/E:</span><span id="hudE">—</span></div>
+        <div class="metric"><span>Mom. angular |ΔL|/L:</span><span id="hudL">—</span></div>
+        <div class="metric"><span>Planetesimales:</span><span id="hudPlan">0</span></div>
+      </div>
+    </main>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

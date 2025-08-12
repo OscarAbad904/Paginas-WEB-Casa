@@ -1,0 +1,20 @@
+{
+  "description": "Relaci\u00f3n polvo/gas alta \u2192 formaci\u00f3n r\u00e1pida de planetesimales",
+  "nParticles": 6000,
+  "gasFrac": 0.5,
+  "seed": 321,
+  "params": {
+    "G": 0.006674,
+    "eps": 0.01,
+    "gamma": 1.4,
+    "kpress": 1.1,
+    "hKernel": 0.07,
+    "nu": 0.06,
+    "tau": 0.3,
+    "dtMax": 0.008,
+    "warp": 10,
+    "enableGas": true,
+    "enableDrag": true,
+    "enableCollisions": true
+  }
+}

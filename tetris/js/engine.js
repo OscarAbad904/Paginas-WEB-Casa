@@ -35,7 +35,7 @@ export class Engine {
     this.locking = false;
     this.lockMs = 0;
 
-    this.lineClear = null; // {rows:[], t:ms}
+  this.lineClear = null; // {rows:[], t:ms, animIndex:int}
     this.b2b = false;
 
     this.softDrop = false;
@@ -81,17 +81,27 @@ export class Engine {
   tick(dt){
     if (this.paused || this.gameOver) return;
 
-    // animación de limpieza
-    if (this.lineClear){
+    // animación de limpieza escalonada
+    if (this.lineClear) {
       this.lineClear.t -= dt;
-      if (this.lineClear.t <= 0){
-        const n = clearRows(this.board, this.lineClear.rows);
-        this.lineClear = null;
-        // después de limpiar, spawnear
-        this.spawnNext();
-        this.updateGhost();
+      if (this.lineClear.t <= 0) {
+        // Eliminar una línea de las que quedan
+        if (this.lineClear.rows.length > 0) {
+          // Eliminar la más baja (mayor índice)
+          const toRemove = this.lineClear.rows.pop();
+          clearRows(this.board, [toRemove]);
+          // Reiniciar el flash para la(s) que quedan
+          if (this.lineClear.rows.length > 0) {
+            this.lineClear.t = FLASH_MS;
+          } else {
+            // Terminar animación
+            this.lineClear = null;
+            this.spawnNext();
+            this.updateGhost();
+          }
+        }
       }
-      return; // pausa la lógica mientras parpadea
+      return; // pausa la lógica mientras se eliminan
     }
 
     // gravedad
@@ -220,11 +230,12 @@ export class Engine {
 
   lockPiece(){
     if (!this.active) return;
+
     merge(this.board, this.active);
 
     // ¿líneas?
-    const rows = fullRows(this.board);
-    if (rows.length){
+    let rows = fullRows(this.board);
+    if (rows.length) {
       // puntuación
       const base = LINE_POINTS[rows.length] || 0;
       const b2bBonus = (rows.length === 4 && this.b2b) ? Math.floor(base * 0.5) : 0;
@@ -238,6 +249,8 @@ export class Engine {
         this.dropMs = DROP_TABLE[Math.min(DROP_TABLE.length-1, this.level-1)];
         this.onEvent({type:'level', level:this.level});
       }
+      // Ordenar de abajo a arriba
+      rows = rows.sort((a, b) => b - a);
       this.lineClear = { rows, t: FLASH_MS };
       this.onEvent({type:'lines', count:rows.length, b2b:this.b2b});
     } else {

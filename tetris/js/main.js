@@ -143,32 +143,39 @@ setupTouch();
 canvas.addEventListener('pointerdown', ()=> canvas.focus(), {passive:true});
 canvas.tabIndex = 0;
 // Escalar la interfaz para ajustarla a la ventana
+
 const appEl = document.getElementById('app');
-function resizeGame(){
-  // restablecer dimensiones originales
-  appEl.style.transform = 'none';
-  appEl.style.position = 'static';
-  appEl.style.margin = '0 auto';
-  appEl.style.left = '';
-  appEl.style.top = '';
-  const baseWidth = appEl.offsetWidth;
-  const baseHeight = appEl.offsetHeight;
-  const scale = Math.min(window.innerWidth / baseWidth, window.innerHeight / baseHeight);
-  appEl.style.transform = `scale(${scale})`;
-  appEl.style.transformOrigin = 'top left';
-  appEl.style.position = 'absolute';
-  appEl.style.left = `${(window.innerWidth - baseWidth * scale) / 2}px`;
-  appEl.style.top = `${(window.innerHeight - baseHeight * scale) / 2}px`;
-  appEl.style.margin = '0';
-  if (scale < 1){
-    appEl.style.transform = `scale(${scale})`;
-    appEl.style.transformOrigin = 'top left';
-    appEl.style.position = 'absolute';
-    appEl.style.left = `${(window.innerWidth - baseWidth * scale) / 2}px`;
-    appEl.style.top = `${(window.innerHeight - baseHeight * scale) / 2}px`;
-    appEl.style.margin = '0';
+const gameSection = document.querySelector('.game');
+const aspect = 10 / 20; // ancho/alto
+const maxGameWidth = 480; // px, máximo deseado
+const maxGameHeight = 960; // px, máximo deseado
+const minMargin = 24; // px, margen inferior mínimo
+
+function resizeGame() {
+  // Calcular el área disponible (restando margen inferior)
+  const availWidth = Math.min(window.innerWidth, maxGameWidth);
+  const availHeight = Math.min(window.innerHeight - minMargin, maxGameHeight);
+  // Mantener relación de aspecto
+  let width = availWidth;
+  let height = width / aspect;
+  if (height > availHeight) {
+    height = availHeight;
+    width = height * aspect;
   }
+  // Ajustar el tamaño real del canvas
+  canvas.style.width = width + 'px';
+  canvas.style.height = height + 'px';
+  canvas.width = Math.round(width);
+  canvas.height = Math.round(height);
+  // Centrar el área de juego
+  gameSection.style.width = width + 'px';
+  gameSection.style.height = height + 'px';
+  gameSection.style.margin = '0 auto';
+  // Ajustar el contenedor principal
+  appEl.style.position = 'static';
+  appEl.style.transform = 'none';
 }
+
 window.addEventListener('resize', resizeGame);
 resizeGame();
 
