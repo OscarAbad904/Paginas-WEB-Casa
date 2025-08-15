@@ -10,10 +10,7 @@ struct SimParams {
   enableGas: u32,
   enableDrag: u32,
   enableCollisions: u32,
-  pad: u32,
-  rhoThresh: f32,
-  vMax: f32,
-  theta: f32
+  pad: u32
 };
 
 @group(0) @binding(0) var<uniform> params: SimParams;
