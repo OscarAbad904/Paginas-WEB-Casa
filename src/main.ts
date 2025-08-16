@@ -79,7 +79,7 @@ class StableOrbitCam {
   }
 
   view() {
-    const eye = [
+    const eye: [number, number, number] = [
       this.target[0] + this.distance * Math.sin(this.phi) * Math.cos(this.theta),
       this.target[1] + this.distance * Math.cos(this.phi),
       this.target[2] + this.distance * Math.sin(this.phi) * Math.sin(this.theta),
@@ -151,15 +151,10 @@ function buildPreset(name: PresetName): { init: ParticleInit[], params: SimParam
 const canvas = document.getElementById('gfx') as HTMLCanvasElement;
 if (!canvas) throw new Error('No se encontró <canvas id="gfx">');
 
-const adapter = await navigator.gpu.requestAdapter();
-if (!adapter) throw new Error('WebGPU no soportado');
-const device = await adapter.requestDevice();
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
-const format = navigator.gpu.getPreferredCanvasFormat();
-context.configure({ device, format, alphaMode: 'premultiplied' });
-
-const renderer = new Renderer(device, format);
-const sim = new Simulation(device);
+let device: GPUDevice;
+let context: GPUCanvasContext;
+let renderer: Renderer;
+let sim: Simulation;
 
 // Estado app
 let currentPreset: PresetName = 'disco_estable' as any;
@@ -167,59 +162,70 @@ let paused = false;
 let frameCount = 0;
 let N = 0;
 
-// Init preset
-await resetToPreset(currentPreset);
+async function init() {
+  const adapter = await navigator.gpu.requestAdapter();
+  if (!adapter) throw new Error('WebGPU no soportado');
+  device = await adapter.requestDevice();
+  context = canvas.getContext('webgpu') as GPUCanvasContext;
+  const format = navigator.gpu.getPreferredCanvasFormat();
+  context.configure({ device, format, alphaMode: 'premultiplied' });
 
-// Cámara
-const cam = new StableOrbitCam();
-cam.attach(canvas);
+  renderer = new Renderer(device, format);
+  sim = new Simulation(device);
 
-// UI wiring
-wireUI();
-
-// Resize
-function resize() {
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
-  const w = Math.floor(canvas.clientWidth * dpr);
-  const h = Math.floor(canvas.clientHeight * dpr);
-  if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
-}
-window.addEventListener('resize', () => {
-  resize();
-});
-resize();
-
-// HUD sampling (cada 500 ms)
-setInterval(sampleAndUpdateHUD, 500);
-
-// Bucle
-let last = performance.now();
-function frame(now: number) {
-  // const dt = Math.min(params.dtMax, (now - last) * 0.001 * params.warp);
-  last = now;
-
-  const encoder = device.createCommandEncoder();
-
-  if (!paused) {
-    // Rampa de gas/drag para estabilizar órbitas
-    if (frameCount === 2000) params.tau = 3.0;
-    if (frameCount === 3000) { params.enableGas = false; params.enableDrag = false; }
-    sim.dispatch(encoder);      // *** avanzar simulación ***
-    frameCount++;
+  try {
+    await resetToPreset(currentPreset);
+  } catch (e) {
+    console.error('Error al iniciar la simulación', e);
   }
 
-  // Render
-  const colorView = context.getCurrentTexture().createView();
-  const aspect = canvas.width / Math.max(1, canvas.height);
-  const view = cam.view();
-  const proj = cam.proj(aspect);
-  renderer.writeCamera(view, proj, 8.0 * params.volumeScale, 40.0, [canvas.width, canvas.height]);
-  renderer.frame(encoder, colorView, (sim as any).n ?? N);
+  const cam = new StableOrbitCam();
+  cam.attach(canvas);
 
-  device.queue.submit([encoder.finish()]);
+  wireUI();
+
+  function resize() {
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const w = Math.floor(canvas.clientWidth * dpr);
+    const h = Math.floor(canvas.clientHeight * dpr);
+    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  setInterval(sampleAndUpdateHUD, 500);
+
+  let last = performance.now();
+  function frame(now: number) {
+    last = now;
+
+    const encoder = device.createCommandEncoder();
+
+    if (!paused) {
+      if (frameCount === 2000) params.tau = 3.0;
+      if (frameCount === 3000) { params.enableGas = false; params.enableDrag = false; }
+      sim.dispatch(encoder);
+      frameCount++;
+    }
+
+    const colorView = context.getCurrentTexture().createView();
+    const aspect = canvas.width / Math.max(1, canvas.height);
+    const view = cam.view();
+    const proj = cam.proj(aspect);
+    renderer.writeCamera(view, proj, 8.0 * params.volumeScale, 40.0, [canvas.width, canvas.height]);
+    renderer.frame(encoder, colorView, (sim as any).n ?? N);
+
+    device.queue.submit([encoder.finish()]);
+    requestAnimationFrame(frame);
+  }
   requestAnimationFrame(frame);
+
+  console.log('Simulación inicializada');
 }
-requestAnimationFrame(frame);
+
+init().catch((e) => {
+  console.error('Fallo al iniciar la simulación', e);
+});
 
 // ========= helpers =========
 
@@ -242,10 +248,13 @@ function wireUI() {
   const btnLoad  = qs<HTMLButtonElement>(UI_IDS.btnLoad);
   const input    = qs<HTMLInputElement>(UI_IDS.inputFile);
 
-  if (btnPause) btnPause.onclick = () => {
-    paused = !paused;
-    btnPause.textContent = paused ? 'Reanudar' : 'Pausa';
-  
+  if (btnPause) {
+    btnPause.onclick = () => {
+      paused = !paused;
+      btnPause.textContent = paused ? 'Reanudar' : 'Pausa';
+    };
+  }
+
   // Selector de preset
   const selPreset = document.getElementById('preset') as HTMLSelectElement | null;
   if (selPreset) {
@@ -259,7 +268,6 @@ function wireUI() {
       await resetToPreset(currentPreset);
     };
   }
-};
 
   if (btnReset) btnReset.onclick = async () => {
     paused = false;

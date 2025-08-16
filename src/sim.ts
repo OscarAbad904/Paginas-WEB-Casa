@@ -1,5 +1,6 @@
 import { SimParams, ParticleInit } from './types';
 import { createBuffer, PARTICLE_STRIDE } from './buffers';
+import computeShader from './compute.wgsl?raw';
 
 /// <reference types="@webgpu/types" />
 
@@ -19,6 +20,11 @@ export class Simulation {
   velMass!: GPUBuffer;
   aux!: GPUBuffer;
   accel!: GPUBuffer;
+  bhInfo?: GPUBuffer;
+  bhNodesA!: GPUBuffer;
+  bhNodesB!: GPUBuffer;
+  bhChildren!: GPUBuffer;
+  bhBindGroup!: GPUBindGroup;
   n!: number;
   params!: SimParams;
   frameCount: number = 0;
@@ -29,7 +35,7 @@ export class Simulation {
 
   async init(particles: Float32Array, velMass: Float32Array, aux: Float32Array, params: SimParams) {
     this.n = particles.length / 4;
-    const module = this.device.createShaderModule({ code: await (await fetch('/src/compute.wgsl')).text() });
+    const module = this.device.createShaderModule({ code: computeShader });
 
     // Buffers
     this.posType = createBuffer(this.device, particles.byteLength, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC, 'posType');

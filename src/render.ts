@@ -1,4 +1,6 @@
 
+import renderShader from './render.wgsl?raw';
+
 export class Renderer {
   device: GPUDevice;
   format: GPUTextureFormat;
@@ -13,7 +15,7 @@ export class Renderer {
   }
 
   async init(particlesBuf: GPUBuffer, auxBuf: GPUBuffer, velMassBuf: GPUBuffer) {
-    const module = this.device.createShaderModule({ code: await (await fetch('/src/render.wgsl')).text() });
+    const module = this.device.createShaderModule({ code: renderShader });
 
     const quad = new Float32Array([
       -1,-1,  1,-1,  -1, 1,
