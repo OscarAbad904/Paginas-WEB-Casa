@@ -79,7 +79,7 @@ class StableOrbitCam {
   }
 
   view() {
-    const eye = [
+    const eye: [number, number, number] = [
       this.target[0] + this.distance * Math.sin(this.phi) * Math.cos(this.theta),
       this.target[1] + this.distance * Math.cos(this.phi),
       this.target[2] + this.distance * Math.sin(this.phi) * Math.sin(this.theta),
@@ -168,7 +168,11 @@ let frameCount = 0;
 let N = 0;
 
 // Init preset
-await resetToPreset(currentPreset);
+try {
+  await resetToPreset(currentPreset);
+} catch (e) {
+  console.error('Error al iniciar la simulación', e);
+}
 
 // Cámara
 const cam = new StableOrbitCam();
@@ -242,10 +246,13 @@ function wireUI() {
   const btnLoad  = qs<HTMLButtonElement>(UI_IDS.btnLoad);
   const input    = qs<HTMLInputElement>(UI_IDS.inputFile);
 
-  if (btnPause) btnPause.onclick = () => {
-    paused = !paused;
-    btnPause.textContent = paused ? 'Reanudar' : 'Pausa';
-  
+  if (btnPause) {
+    btnPause.onclick = () => {
+      paused = !paused;
+      btnPause.textContent = paused ? 'Reanudar' : 'Pausa';
+    };
+  }
+
   // Selector de preset
   const selPreset = document.getElementById('preset') as HTMLSelectElement | null;
   if (selPreset) {
@@ -259,7 +266,6 @@ function wireUI() {
       await resetToPreset(currentPreset);
     };
   }
-};
 
   if (btnReset) btnReset.onclick = async () => {
     paused = false;

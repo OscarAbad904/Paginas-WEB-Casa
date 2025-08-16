@@ -21,6 +21,12 @@ export function gatherParams(): SimParams {
     enableGas: (document.getElementById('toggleGas') as HTMLInputElement).checked,
     enableDrag: (document.getElementById('toggleDrag') as HTMLInputElement).checked,
     enableCollisions: (document.getElementById('toggleCollisions') as HTMLInputElement).checked,
+    Mstar: 1.0,
+    collisionsEvery: 4,
+    volumeScale: 1.0,
+    useAdaptiveDt: false,
+    cfl: 0.25,
+    eta: 0.2,
   };
 }
 
