@@ -1,112 +1,164 @@
-
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Virus! El Juego - Versión Mejorada</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
-    <style>
-        body {
-            font-family: 'Poppins', sans-serif;
-            background-color: #111827;
-            color: #f3f4f6;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simulación formación planetaria — WebGPU</title>
+  <style>
+    html, body { height: 100%; margin: 0; background: #0b0f16; color: #e9eef5; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';}
+    #app { display: grid; grid-template-columns: 280px 1fr; height: 100%; }
+    aside { padding: 12px 14px; border-right: 1px solid #1f2a3a; overflow: auto; background: #0f1520;}
+    main { position: relative; }
+    canvas { width: 100%; height: 100%; display: block; }
+    h1 { font-size: 16px; margin: 8px 0 12px; }
+    .group { margin: 10px 0; }
+    .row { display:flex; align-items:center; gap:8px; margin: 4px 0; }
+    label { font-size: 12px; color: #cbd5e1; }
+    input[type="range"]{ width: 100%; }
+    input[type="number"], select { width: 80px; background:#0b0f16; color:#cbd5e1; border:1px solid #334155; padding:2px 6px; }
+    button { background:#1e293b; color:#e2e8f0; border:1px solid #334155; padding:6px 10px; border-radius:6px; cursor:pointer; }
+    button:hover { background:#2a364a; }
+    .hud { position:absolute; top:8px; right:8px; background:rgba(10,14,20,0.7); padding:8px 10px; border-radius:8px; font-size:12px; }
+    .metric { display:flex; justify-content:space-between; gap:18px; }
+    .toggles label { display:flex; align-items:center; gap:6px; margin:4px 0; }
+    .preset { display:flex; gap:8px; margin: 8px 0; }
+    small.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; color:#94a3b8; }
+  </style>
 </head>
-<body class="min-h-screen flex flex-col p-2 sm:p-4">
-
-    <!-- Encabezado -->
-    <header class="flex-shrink-0 flex flex-col sm:flex-row justify-between items-center p-4 rounded-lg bg-gray-800/50 mb-4">
-        <h1 class="text-2xl md:text-3xl font-bold text-white tracking-wider">Virus! <span class="text-rose-400">El Juego</span></h1>
-        <div class="flex items-center gap-2 sm:gap-4 mt-2 sm:mt-0">
-            <button id="btn-help" class="px-4 py-2 bg-indigo-500 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-600 transition-colors">Ayuda</button>
-            <button id="btn-reset" class="px-4 py-2 bg-rose-500 text-white font-semibold rounded-lg shadow-md hover:bg-rose-600 transition-colors">Nueva Partida</button>
+<body>
+  <div id="app">
+    <aside>
+      <h1>Formación Planetaria (WebGPU)</h1>
+      <div class="group">
+        <div class="row preset">
+          <select id="preset">
+            <option value="nube_rotacion">Nube esférica</option>
+            <option value="disco_kepler">Disco Kepleriano</option>
+          <option value="disco_estable">Disco estable (recomendado)</option>
+            <option value="polvo_alto">Polvo alto</option>
+            <option value="gtx1050">GTX 1050 Friendly</option>
+          </select>
+          <button id="btnLoadPreset">Cargar</button>
         </div>
-    </header>
-
-    <!-- Tablero de Juego -->
-    <main class="flex-grow grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] gap-6 items-start">
-        <!-- Área del Bot -->
-        <section id="bot-area" class="w-full">
-            <h2 class="text-xl font-bold text-center mb-2 text-gray-400">Oponente (Bot)</h2>
-            <div id="bot-board" class="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-gray-800/50 rounded-xl min-h-[150px]"></div>
-            <p id="bot-msg" class="text-center mt-2 text-gray-400 italic min-h-[24px]"></p>
-        </section>
-
-        <!-- Zona Central (Mazo y Descarte) -->
-        <section class="flex flex-row lg:flex-col items-center justify-around lg:justify-start gap-8 py-4">
-            <div class="text-center">
-                <h2 class="text-lg font-semibold mb-2">Mazo</h2>
-                <div id="deck-pile" class="card w-28 h-40 sm:w-32 sm:h-44 bg-gray-600 flex items-center justify-center cursor-pointer group">
-                </div>
-                <span id="deck-count" class="mt-2 text-lg font-mono"></span>
-            </div>
-            <div class="text-center">
-                <h2 class="text-lg font-semibold mb-2">Descarte</h2>
-                <div id="discard-pile" class="card w-28 h-40 sm:w-32 sm:h-44 bg-gray-800 flex items-center justify-center"></div>
-                <span id="discard-count" class="mt-2 text-lg font-mono"></span>
-            </div>
-        </section>
-
-        <!-- Área del Jugador -->
-        <section id="player-area" class="w-full">
-            <h2 class="text-xl font-bold text-center mb-2 text-white">Tus Órganos</h2>
-            <div id="player-board" class="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-gray-800/50 rounded-xl min-h-[150px]"></div>
-            <p id="player-msg" class="text-center mt-2 text-emerald-300 font-semibold min-h-[24px]"></p>
-        </section>
+        <div class="row">
+          <label>Semilla</label>
+          <input id="seed" type="number" value="42">
+        </div>
+        <div class="row">
+          <label>N Partículas</label>
+          <input id="nParticles" type="number" value="4000">
+        </div>
+        <div class="row">
+          <label>Fracción gas</label>
+          <input id="gasFrac" type="number" min="0" max="1" step="0.05" value="0.7">
+        </div>
+        <div class="row">
+          <label>G</label>
+          <input id="G" type="number" step="0.0001" value="6.674e-3">
+        </div>
+        <div class="row">
+          <label>θ (BH)</label>
+          <input id="theta" type="number" step="0.05" value="0.6">
+        </div>
+        <div class="row">
+          <label>ε (softening)</label>
+          <input id="eps" type="number" step="0.0001" value="0.01">
+        </div>
+        <div class="row">
+          <label>γ (gas)</label>
+          <input id="gamma" type="number" step="0.1" value="1.4">
+        </div>
+        <div class="row">
+          <label>k (gas)</label>
+          <input id="kpress" type="number" step="0.01" value="1.0">
+        </div>
+        <div class="row">
+          <label>h (SPH)</label>
+          <input id="hKernel" type="number" step="0.001" value="0.08">
+        </div>
+        <div class="row">
+          <label>Viscosidad SPH</label>
+          <input id="nu" type="number" step="0.001" value="0.05">
+        </div>
+        <div class="row">
+          <label>τ (arrastre)</label>
+          <input id="tau" type="number" step="0.001" value="0.5">
+        </div>
+        <div class="row">
+          <label>dt máx.</label>
+          <input id="dtMax" type="number" step="0.0001" value="0.01">
+        </div>
+        <div class="row">
+          <label>Warp</label>
+          <select id="warp">
+            <option value="1">×1</option>
+            <option value="10">×10</option>
+            <option value="100">×100</option>
+          </select>
+        </div>
+      </div>
+      <div class="group toggles">
+        <label><input id="toggleAutoFrame" type="checkbox" checked> Auto-encuadre</label>
+        <label><input id="toggleGas" type="checkbox" checked> Gas</label>
+        <label><input id="toggleDrag" type="checkbox" checked> Arrastre (polvo↔gas)</label>
+        <label><input id="toggleCollisions" type="checkbox"> Colisiones/Acreción</label>
+      </div>
+      
+        <div class="row">
+          <label>ρ umbral (planetesimal)</label>
+          <input id="rhoThresh" type="number" step="0.01" value="6.0">
+        </div>
+        <div class="row">
+          <label>v máx (clamp)</label>
+          <input id="vMax" type="number" step="0.1" value="10.0">
+        </div>
+    
+      
+        <div class="row">
+          <label>Gravedad</label>
+          <select id="gravMode">
+            <option value="auto">Auto (BH si N≥3000)</option>
+            <option value="bh">Barnes–Hut</option>
+            <option value="n2">O(N²)</option>
+          </select>
+        </div>
+        <div class="row">
+          <label>Calidad</label>
+          <select id="quality">
+            <option value="low">Baja</option>
+            <option value="med" selected>Media</option>
+            <option value="high">Alta</option>
+          </select>
+        </div>
+        <div class="row"><label><input id="autoReduceN" type="checkbox" checked> Auto-reducir N si FPS baja</label></div>
+    
+      <div class="group">
+        <div class="row" style="gap:8px;">
+          <button id="btnPlayPause">Pausa</button>
+          <button id="btnReset">Reset</button>
+        </div>
+        <div class="row" style="gap:8px;">
+          <button id="btnExport">Exportar CSV</button>
+        </div>
+      </div>
+      <div class="group">
+        <small class="mono">Sugerido: N ≤ 8k para este modo O(N²). Barnes–Hut vendrá como mejora.</small>
+      </div>
+    </aside>
+    <main>
+      <canvas id="gfx"></canvas>
+      <div class="hud" id="hud">
+        <div class="metric"><span>FPS:</span><span id="fps">0</span></div>
+        <div class="metric"><span>N:</span><span id="hudN">0</span></div>
+        <div class="metric"><span>Energía |ΔE|/E:</span><span id="hudE">—</span></div>
+        <div class="metric"><span>Mom. angular |ΔL|/L:</span><span id="hudL">—</span></div>
+        <div class="metric"><span>Planetesimales:</span><span id="hudPlan">0</span></div>
+      </div>
     </main>
-
-    <!-- Mano del Jugador y Controles -->
-    <footer class="flex-shrink-0 mt-6">
-        <div id="player-controls" class="flex justify-center items-center gap-4 mb-2">
-            <button id="btn-discard-action" class="px-5 py-2 bg-yellow-500 text-white font-semibold rounded-lg shadow-md hover:bg-yellow-600 transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed">Descartar</button>
-        </div>
-        <div id="player-hand" class="flex justify-center items-end gap-2 sm:gap-4 p-4 min-h-[160px] animate-slide-up"></div>
-    </footer>
-    
-    <!-- Modal de Ayuda -->
-    <div id="help-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 modal-backdrop">
-        <div class="bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl p-6 border border-gray-700 relative">
-            <button id="close-modal-btn" class="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-            </button>
-            <h2 class="text-2xl font-bold text-center mb-4 text-indigo-400">¿Cómo Jugar a Virus!?</h2>
-            <div class="text-gray-300 space-y-3">
-                <p><strong>Objetivo:</strong> ¡Sé el primero en conseguir 4 órganos diferentes y sanos!</p>
-                <div>
-                </div>
-                <p>Al final de tu turno, roba cartas del mazo hasta que vuelvas a tener 3 en la mano.</p>
-                <div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Templates (invisibles) -->
-
-    <!-- Template de carta con imágenes originales -->
-    <template id="card-template">
-        <div class="card w-24 h-32 sm:w-28 sm:h-40 flex flex-col items-center justify-center p-2 cursor-pointer text-white font-bold">
-            <img class="base" alt="icono del órgano" style="width:65%;">
-            <img class="overlay" alt="superposición de virus" style="position:absolute;top:50%;left:50%;width:55%;transform:translate(-50%,-50%);pointer-events:none;">
-            <span class="action-label absolute bottom-1 left-0 right-0 text-center text-xs"></span>
-        </div>
-    </template>
-
-    <!-- Template de slot de órgano con imágenes originales -->
-    <template id="organ-slot-template">
-        <div class="organ-slot w-full aspect-square flex items-center justify-center">
-            <img class="base" alt="icono del órgano" style="width:65%;">
-            <img class="overlay" alt="superposición de virus" style="position:absolute;top:50%;left:50%;width:55%;transform:translate(-50%,-50%);pointer-events:none;">
-        </div>
-    </template>
-
-
-    <script type="module" src="ui.js"></script>
-</body>
-</html>
+  </div>
+  <!-- Usar Vite: la entrada es src/main.ts, Vite lo resuelve automáticamente -->
+  <script type="module" src="/src/main.ts"></script>
+  <!-- Favicon de ejemplo -->
+  <link rel="icon" type="image/png" href="./favicon.png">
+  </body>
+  </html>

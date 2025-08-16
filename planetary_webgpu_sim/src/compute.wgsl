@@ -7,9 +7,16 @@ struct SimParams {
   nu: f32,
   tau: f32,
   dt: f32,
+  // extras that TS escribe en el uniform
+  rhoThresh: f32,
+  vMax: f32,
+  theta: f32,
+  Mstar: f32,
+  // flags como u32 (cualquier valor != 0 cuenta como true)
   enableGas: u32,
   enableDrag: u32,
   enableCollisions: u32,
+  // padding para alinear a 16 bytes
   pad: u32
 };
 
@@ -97,7 +104,12 @@ fn compute_forces(@builtin(global_invocation_id) gid: vec3<u32>) {
     let mj = vel_mass[j].w;
     a += params.G * mj * rvec * invr3;
     phi += - params.G * mj / sqrt(r2);
-  }
+
+  // Estrella central en (0,0,0) con softening eps
+  let r2_star = dot(Pi, Pi) + eps2;
+  let invr3_star = inverseSqrt(r2_star*r2_star*r2_star);
+  a += - params.G * params.Mstar * Pi * invr3_star;
+    }
 
   if (params.enableGas != 0u) {
     // SPH presión/viscosidad (aprox: vecinos en radio h, O(N^2))

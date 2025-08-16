@@ -1,338 +1,341 @@
-import { initWebGPU } from './initWebGPU';
-import { Renderer } from './render';
-import { Simulation } from './sim';
-import { OrbitCamera } from './orbitcam';
-import { exportCSV } from './export';
-import { gatherParams, hookUI, readBasicControls, setHUD, getAutoFrame } from './ui';
-import { initNubeEsferica, initDiscoKepler, initPolvoAlto } from './initStates';
-import { SimParams, PresetName } from './types';
-import { buildQuadtreeXZ, uploadBH } from './bh';
+// src/main.ts
 
-let device: GPUDevice, context: GPUCanvasContext, format: GPUTextureFormat;
-let renderer: Renderer;
-let sim: Simulation;
-let camera = new OrbitCamera();
-let running = true;
-let autoFrame = true;
-let warp = 1;
+// NOTA: evita tipar rígidamente "SimParams" aquí para no chocar con tu interfaz previa.
+// Si lo necesitas, crea una interfaz local o usa "as const".
 
-let N = 0;
-let lastTime = performance.now();
-let fpsAcc = 0, fpsCnt = 0, fpsOut = 0;
-let baseline: any = null;
-let bhCounter = 0;
+type Mat4 = number[]; // tu tipo actual; lo convertimos a Float32Array al escribir
 
-async function loadPreset(name: PresetName) {
-  const res = await fetch(`/presets/${name}.json`);
-  const preset = await res.json();
-  (document.getElementById('nParticles') as HTMLInputElement).value = preset.nParticles;
-  (document.getElementById('gasFrac') as HTMLInputElement).value = preset.gasFrac;
-  (document.getElementById('seed') as HTMLInputElement).value = preset.seed;
-  // params
-  (document.getElementById('G') as HTMLInputElement).value = preset.params.G;
-  (document.getElementById('eps') as HTMLInputElement).value = preset.params.eps;
-  (document.getElementById('gamma') as HTMLInputElement).value = preset.params.gamma;
-  (document.getElementById('kpress') as HTMLInputElement).value = preset.params.kpress;
-  (document.getElementById('hKernel') as HTMLInputElement).value = preset.params.hKernel;
-  (document.getElementById('theta') as HTMLInputElement).value = preset.params.theta ?? 0.6;
-  (document.getElementById('gravMode') as HTMLSelectElement).value = preset.params.gravMode ?? 'auto';
-  (document.getElementById('quality') as HTMLSelectElement).value = preset.params.quality ?? 'med';
-  (document.getElementById('autoReduceN') as HTMLInputElement).checked = (preset.params.autoReduceN ?? true);
-  (document.getElementById('nu') as HTMLInputElement).value = preset.params.nu;
-  (document.getElementById('tau') as HTMLInputElement).value = preset.params.tau;
-  (document.getElementById('dtMax') as HTMLInputElement).value = preset.params.dtMax;
-  (document.getElementById('warp') as HTMLSelectElement).value = preset.params.warp;
-  (document.getElementById('toggleGas') as HTMLInputElement).checked = preset.params.enableGas;
-  (document.getElementById('toggleDrag') as HTMLInputElement).checked = preset.params.enableDrag;
-  (document.getElementById('toggleCollisions') as HTMLInputElement).checked = preset.params.enableCollisions;
-  await resetSim();
+const canvas = document.querySelector("canvas") as HTMLCanvasElement;
+if (!canvas) throw new Error("No se encontró un <canvas> en el documento.");
+
+let device: GPUDevice;
+let context: GPUCanvasContext;
+let format: GPUTextureFormat;
+
+let renderPipeline: GPURenderPipeline;
+let computePipeline: GPUComputePipeline;
+
+// ==== Buffers / Texturas / Sampler ====
+let computeUniform: GPUBuffer;     // 64 bytes (uniform) - esperado por compute @binding(0)
+let storageA: GPUBuffer;           // storage - @binding(1)
+let storageB: GPUBuffer;           // storage - @binding(2)
+let storageC: GPUBuffer;           // storage - @binding(3)
+
+let drawSampler: GPUSampler;       // fragment @binding(0)
+let drawTexture: GPUTexture;       // fragment @binding(1)
+let drawTextureView: GPUTextureView;
+let drawUniform: GPUBuffer;        // 8 bytes (uniform) - fragment @binding(2)
+
+let computeBindGroup: GPUBindGroup;
+let fragmentBindGroup: GPUBindGroup;
+
+let isRunning = false;
+let frameHandle = 0;
+
+// ====== Shaders embebidos (ajusta si prefieres .wgsl externos) ======
+const DRAW_WGSL = /* wgsl */`
+struct VSOut {
+  @builtin(position) pos : vec4<f32>,
+  @location(0) uv : vec2<f32>,
+};
+
+@vertex
+fn vs(@builtin(vertex_index) vi: u32) -> VSOut {
+  var pos = array<vec2<f32>, 6>(
+    vec2<f32>(-1.0, -1.0), vec2<f32>( 1.0, -1.0), vec2<f32>(-1.0,  1.0),
+    vec2<f32>(-1.0,  1.0), vec2<f32>( 1.0, -1.0), vec2<f32>( 1.0,  1.0)
+  );
+  var uv = array<vec2<f32>, 6>(
+    vec2<f32>(0.0, 1.0), vec2<f32>(1.0, 1.0), vec2<f32>(0.0, 0.0),
+    vec2<f32>(0.0, 0.0), vec2<f32>(1.0, 1.0), vec2<f32>(1.0, 0.0)
+  );
+
+  var out: VSOut;
+  out.pos = vec4<f32>(pos[vi], 0.0, 1.0);
+  out.uv = uv[vi];
+  return out;
 }
 
-function buildParticles(init: any[]) {
-  N = init.length;
-  const posType = new Float32Array(N*4);
-  const velMass = new Float32Array(N*4);
-  const aux = new Float32Array(N*4);
-  for (let i=0;i<N;i++) {
-    const p = init[i];
-    posType[4*i+0] = p.pos[0];
-    posType[4*i+1] = p.pos[1];
-    posType[4*i+2] = p.pos[2];
-    posType[4*i+3] = p.type; // w=type
-    velMass[4*i+0] = p.vel[0];
-    velMass[4*i+1] = p.vel[1];
-    velMass[4*i+2] = p.vel[2];
-    velMass[4*i+3] = p.mass; // w=mass
-    aux[4*i+0] = 1.0; // density (init)
-    aux[4*i+1] = 0.0; // pressure
-    aux[4*i+2] = 1.0; // alive
-    aux[4*i+3] = 0.03; // radius approx
+@group(0) @binding(0) var samp : sampler;
+@group(0) @binding(1) var tex  : texture_2d<f32>;
+
+struct DrawUniforms {
+  pointSize : f32,   // no usado aquí, pero reservado
+  aspect    : f32,
+};
+
+@group(0) @binding(2) var<uniform> draw : DrawUniforms;
+
+@fragment
+fn fs(in: VSOut) -> @location(0) vec4<f32> {
+  let color = textureSample(tex, samp, in.uv);
+  return vec4<f32>(color.rgb, 1.0);
+}
+`;
+
+const COMPUTE_WGSL = /* wgsl */`
+struct ComputeUniforms {
+  mvp : mat4x4<f32>,   // 64 bytes
+};
+
+@group(0) @binding(0) var<uniform> U : ComputeUniforms;
+@group(0) @binding(1) var<storage, read_write> A : array<f32>;
+@group(0) @binding(2) var<storage, read_write> B : array<f32>;
+@group(0) @binding(3) var<storage, read_write> C : array<f32>;
+
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+  let i = gid.x;
+  if (i < arrayLength(&A)) {
+    let f = f32(i) * 0.001;
+    A[i] = f;
+    B[i] = f * 2.0;
+    C[i] = A[i] + B[i];
   }
-  return { posType, velMass, aux };
 }
+`;
 
-async function resetSim() {
-  const canvas = document.getElementById('gfx') as HTMLCanvasElement;
-  const { seed, nParticles: nBase, gasFrac } = readBasicControls();
-  const p: SimParams = gatherParams();
-  warp = p.warp;
-
-  // init state by preset choice heuristics
-  const presetSel = (document.getElementById('preset') as HTMLSelectElement).value as PresetName;
-  let init;
-  const q = p.quality;
-  const nParticles = q==='high'? nBase : q==='med'? Math.floor(nBase*0.7) : Math.floor(nBase*0.5);
-  if (presetSel === 'nube_rotacion') init = initNubeEsferica(nParticles, gasFrac, seed);
-  else if (presetSel === 'disco_kepler') init = initDiscoKepler(nParticles, gasFrac, seed);
-  else init = initPolvoAlto(nParticles, gasFrac, seed);
-
-  const { posType, velMass, aux } = buildParticles(init);
-
-  if (!device) {
-    const initGPU = await initWebGPU(canvas);
-    device = initGPU.device; context = initGPU.context; format = initGPU.canvasFormat;
-    renderer = new Renderer(device, format);
-    camera.attach(canvas);
+// ====== Init WebGPU ======
+async function init() {
+  if (!("gpu" in navigator)) {
+    throw new Error("WebGPU no soportado por el navegador.");
   }
-  const newSim = new Simulation(device);
-  await newSim.init(posType, velMass, aux, p);
-  sim = newSim;
-  await renderer.init(sim.posType, sim.aux, sim.velMass);
-  onResize();
-  lastTime = performance.now();
-  await fitCameraToParticles();
-}
+  const adapter = await (navigator as any).gpu.requestAdapter();
+  if (!adapter) throw new Error("No se pudo obtener un adapter WebGPU.");
+  device = await adapter.requestDevice();
 
-function onResize() {
-  const canvas = document.getElementById('gfx') as HTMLCanvasElement;
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
-  canvas.width = Math.floor(canvas.clientWidth * dpr);
-  canvas.height = Math.floor(canvas.clientHeight * dpr);
-  renderer.resize(canvas.width, canvas.height);
-}
+  context = canvas.getContext("webgpu") as unknown as GPUCanvasContext;
+  format = navigator.gpu.getPreferredCanvasFormat();
 
-async function readBufferF32(src: GPUBuffer, floats: number) {
-  const size = floats * 4;
-  const dst = device.createBuffer({
-    size,
-    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+  context.configure({
+    device,
+    format,
+    alphaMode: "opaque"
   });
-  const encoder = device.createCommandEncoder();
-  encoder.copyBufferToBuffer(src, 0, dst, 0, size);
-  device.queue.submit([encoder.finish()]);
-  await dst.mapAsync(GPUMapMode.READ);
-  const copy = dst.getMappedRange().slice(0);
-  dst.unmap();
-  dst.destroy();
-  return new Float32Array(copy);
-}
 
-async function fitCameraToParticles() {
-  if (!sim || !device) return;
-  const buf = await readBufferF32(sim.posType, N * 4);
-  let minX = Infinity, minY = Infinity, minZ = Infinity;
-  let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
-  let activeParticles = 0;
+  // ===== Recursos de compute =====
+  // Uniform de 64 bytes (mat4x4<f32>)
+  computeUniform = device.createBuffer({
+    label: "compute-ubo-64B",
+    size: 64,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+  });
 
-  for (let i = 0; i < N; i++) {
-    const x = buf[4 * i + 0];
-    const y = buf[4 * i + 1];
-    const z = buf[4 * i + 2];
-    const type = buf[4 * i + 3]; // Tipo de partícula
+  // Tres storage buffers (mín 16B según tus errores): creamos N floats
+  const N = 1024;
+  const byteLen = N * 4;
+  storageA = device.createBuffer({
+    label: "storageA",
+    size: byteLen,
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC
+  });
+  storageB = device.createBuffer({
+    label: "storageB",
+    size: byteLen,
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC
+  });
+  storageC = device.createBuffer({
+    label: "storageC",
+    size: byteLen,
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC
+  });
 
-    // Solo considerar partículas activas
-    if (type >= 0) {
-      if (x < minX) minX = x; if (x > maxX) maxX = x;
-      if (y < minY) minY = y; if (y > maxY) maxY = y;
-      if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
-      activeParticles++;
-    }
-  }
+  // ===== Recursos de fragmento =====
+  drawSampler = device.createSampler({
+    label: "draw-sampler",
+    magFilter: "linear",
+    minFilter: "linear"
+  });
 
-  if (activeParticles > 0) {
-    const targetPos = [
-      (minX + maxX) / 2,
-      (minY + maxY) / 2,
-      (minZ + maxZ) / 2
-    ];
+  drawTexture = device.createTexture({
+    label: "draw-texture",
+    size: { width: 256, height: 256 },
+    format: "rgba8unorm",
+    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST
+  });
+  drawTextureView = drawTexture.createView();
 
-    // Interpolación suave de la posición objetivo
-    const smoothFactor = 0.1;
-    camera.target = camera.target.map((current: number, i: number) => 
-      current + (targetPos[i] - current) * smoothFactor
-    ) as [number, number, number];
-
-    const dx = maxX - minX;
-    const dy = maxY - minY;
-    const dz = maxZ - minZ;
-    const radius = Math.max(dx, dy, dz) * 0.5;
-    
-    // Calcular la distancia objetivo y aplicar interpolación suave
-    const targetDistance = Math.max(radius * 2.5, 0.1);
-    camera.distance += (targetDistance - camera.distance) * smoothFactor;
-  }
-}
-
-let lastFitTime = 0;
-const FIT_INTERVAL = 100; // Ajustar la cámara cada 100ms
-
-
-let afCounter = 0;
-async function autoFrameCamera() {
-  if (!getAutoFrame()) return;
-  afCounter++; if (afCounter % 20 !== 0) return;
-  const posBytes = await readBuffer(device, sim.posType, N*4*4);
-  const auxBytes = await readBuffer(device, sim.aux, N*4*4);
-  const pos = new Float32Array(posBytes); const aux = new Float32Array(auxBytes);
-  let minx=1e9,miny=1e9,minz=1e9,maxx=-1e9,maxy=-1e9,maxz=-1e9, count=0;
-  for (let i=0;i<N;i++){ if (aux[4*i+2]<0.5) continue; const x=pos[4*i],y=pos[4*i+1],z=pos[4*i+2];
-    if(x<minx)minx=x; if(x>maxx)maxx=x; if(y<miny)miny=y; if(y>maxy)maxy=y; if(z<minz)minz=z; if(z>maxz)maxz=z; count++;}
-  if (count<1) return;
-  const cx=0.5*(minx+maxx), cy=0.5*(miny+maxy), cz=0.5*(minz+maxz);
-  const rx=0.5*(maxx-minx), ry=0.5*(maxy-miny), rz=0.5*(maxz-minz);
-  const r = Math.max(0.5, Math.max(rx, Math.max(ry, rz)));
-  const desired = Math.max(2.0, r*3.0);
-  camera.target = [cx, cy, cz] as [number, number, number];
-  camera.distance = desired;
-}
-function frame() {
-
-  const now = performance.now();
-  const dtReal = Math.min(0.05, (now - lastTime)/1000);
-  lastTime = now;
-
-  // Ajustar la cámara periódicamente
-  if (now - lastFitTime > FIT_INTERVAL) {
-    fitCameraToParticles();
-    lastFitTime = now;
-  }
-
-  const p = gatherParams();
-  warp = p.warp;
-
-  // dt adaptativo básico: limitar por dtMax y CFL ~ h / vmax (muy grosero)
-  const dt = Math.min(p.dtMax, 0.5 * p.hKernel / 1.0) * warp;
-  sim.updateUniform(p, dt);
-
-  if (running) {
-    const encoder = device.createCommandEncoder();
-    sim.dispatch(encoder);
-    const viewTex = context.getCurrentTexture().createView();
-    const canvas = document.getElementById('gfx') as HTMLCanvasElement;
-    const aspect = canvas.width / Math.max(1, canvas.height);
-    const eye = [
-      camera.target[0] + camera.distance * Math.sin(camera.phi) * Math.cos(camera.theta),
-      camera.target[1] + camera.distance * Math.cos(camera.phi),
-      camera.target[2] + camera.distance * Math.sin(camera.phi) * Math.sin(camera.theta),
-    ];
-    const view = new Float32Array(lookAt(eye, camera.target as any, [0,1,0]));
-    const proj = new Float32Array(perspective(60*Math.PI/180, aspect, 0.01, 100.0));
-    renderer.writeCamera(view, proj, 6.0, 12.0, [canvas.width, canvas.height]);
-    renderer.frame(encoder, viewTex, N);
-    device.queue.submit([encoder.finish()]);
-  }
-
-  // FPS
-  fpsAcc += 1/dtReal; fpsCnt++;
-  if (fpsCnt > 10) { fpsOut = fpsAcc/fpsCnt; fpsAcc=0; fpsCnt=0; }
-  setHUD({ fps: fpsOut, N });
-
-  autoFrameCamera();
-  readMetricsAndUpdateHUD();
-  rebuildBHIfNeeded(gatherParams());
-  // Auto reduce N if FPS low
-  if (gatherParams().autoReduceN && fpsOut>0 && fpsOut < 25 && N>2000) { N = Math.floor(N*0.9); }
-  requestAnimationFrame(frame);
-}
-
-
-async function readBuffer(device: GPUDevice, src: GPUBuffer, size: number): Promise<ArrayBuffer> {
-  const dst = device.createBuffer({ size, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
-  const encoder = device.createCommandEncoder();
-  encoder.copyBufferToBuffer(src, 0, dst, 0, size);
-  device.queue.submit([encoder.finish()]);
-  await dst.mapAsync(GPUMapMode.READ);
-  const copy = dst.getMappedRange().slice(0);
-  dst.unmap(); dst.destroy();
-  return copy;
-}
-
-function perspective(fovy: number, aspect: number, near: number, far: number) {
-  const f = 1.0 / Math.tan(fovy/2);
-  const nf = 1 / (near - far);
-  return [ f/aspect,0,0,0,  0,f,0,0,  0,0,(far+near)*nf,-1,  0,0,(2*far*near)*nf,0 ];
-}
-function normalize(v: number[]) { const l = Math.hypot(v[0],v[1],v[2]); return [v[0]/l,v[1]/l,v[2]/l]; }
-function cross(a: number[], b: number[]) { return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]; }
-function subtract(a: number[], b: number[]) { return [a[0]-b[0], a[1]-b[1], a[2]-b[2]]; }
-function lookAt(eye: number[], center: number[], up: number[]) {
-  const z = normalize(subtract(eye, center)); const x = normalize(cross(up, z)); const y = cross(z, x);
-  return [ x[0],y[0],z[0],0,  x[1],y[1],z[1],0,  x[2],y[2],z[2],0,  -(x[0]*eye[0]+x[1]*eye[1]+x[2]*eye[2]), -(y[0]*eye[0]+y[1]*eye[1]+y[2]*eye[2]), -(z[0]*eye[0]+z[1]*eye[1]+z[2]*eye[2]), 1 ];
-}
-
-
-async function readMetricsAndUpdateHUD() {
-  // metricsOut: [K, U, Lx, Ly, Lz, nPlanetesimals, nAlive, totalMass] scaled by 1e6 for floats
-  const arr = new Int32Array(await readBuffer(device, (sim as any).metricsBuf, 4*8));
-  const s = 1e-6;
-  const K = arr[0]*s, U = arr[1]*s;
-  const L = [arr[2]*s, arr[3]*s, arr[4]*s];
-  const nPlan = arr[5], nAlive = arr[6];
-  if (!baseline) baseline = { E: K+U, L: Math.hypot(L[0],L[1],L[2]) };
-  const E = K+U;
-  const dE = Math.abs((E - baseline.E) / (baseline.E || 1));
-  const Lmag = Math.hypot(L[0],L[1],L[2]);
-  const dL = Math.abs((Lmag - baseline.L) / (baseline.L || 1));
-  setHUD({ dE, dL, planets: nPlan, N: nAlive });
-}
-
-
-async function rebuildBHIfNeeded(p: SimParams) {
-  const needBH = (p.gravMode === 'bh') || (p.gravMode === 'auto' && N >= 3000);
-  if (!needBH) { if ((sim as any).bhBindGroup) (sim as any).setBH((sim as any).bhNodesA!, (sim as any).bhNodesB!, (sim as any).bhChildren!, false, 0); return; }
-  bhCounter++;
-  if (bhCounter % 10 !== 0) return; // rebuild every ~10 frames
-  // read GPU positions & aux & velMass (for mass)
-  const posBytes = await readBuffer(device, sim.posType, N*4*4);
-  const auxBytes = await readBuffer(device, sim.aux, N*4*4);
-  const velBytes = await readBuffer(device, sim.velMass, N*4*4);
-  const pos = new Float32Array(posBytes);
-  const aux = new Float32Array(auxBytes);
-  const vel = new Float32Array(velBytes);
-  const nodes = buildQuadtreeXZ(pos, vel, aux, N, p.theta);
-  const bh = uploadBH(device, nodes);
-  (sim as any).setBH(bh.nodesA, bh.nodesB, bh.children, true, bh.count);
-}
-
-async function main() {
-
-  hookUI({
-    onLoadPreset: (name) => loadPreset(name),
-    onPlayPause: () => {
-      running = !running;
-      (document.getElementById('btnPlayPause') as HTMLButtonElement).textContent = running ? 'Pausa' : 'Reanudar';
-    },
-    onReset: () => resetSim(),
-    onExport: async () => {
-      // leer buffers a CPU
-      const posR = await readBufferF32(sim.posType, N * 4);
-      const velR = await readBufferF32(sim.velMass, N * 4);
-      const rows = [];
-      for (let i=0;i<N;i++) {
-        rows.push({ x: posR[4*i+0], y: posR[4*i+1], z: posR[4*i+2], vx: velR[4*i+0], vy: velR[4*i+1], vz: velR[4*i+2], m: velR[4*i+3], type: posR[4*i+3] });
+  // Rellenar la textura con un degradado simple
+  {
+    const w = 256, h = 256;
+    const data = new Uint8Array(w * h * 4);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        data[i + 0] = x;         // R
+        data[i + 1] = y;         // G
+        data[i + 2] = 255 - x;   // B
+        data[i + 3] = 255;       // A
       }
-      const mod = await import('./export');
-      mod.exportCSV(rows);
     }
+    device.queue.writeTexture(
+      { texture: drawTexture },
+      data,
+      { bytesPerRow: w * 4 },
+      { width: w, height: h }
+    );
+  }
+
+  drawUniform = device.createBuffer({
+    label: "draw-ubo-8B",
+    size: 8,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
   });
-  window.addEventListener('resize', onResize);
-  await loadPreset('nube_rotacion');
-  autoFrameCamera();
-  readMetricsAndUpdateHUD();
-  rebuildBHIfNeeded(gatherParams());
-  // Auto reduce N if FPS low
-  if (gatherParams().autoReduceN && fpsOut>0 && fpsOut < 25 && N>2000) { N = Math.floor(N*0.9); }
-  requestAnimationFrame(frame);
+
+  // ===== Pipelines =====
+  // Compute
+  {
+    const module = device.createShaderModule({ code: COMPUTE_WGSL });
+
+    const computeBGL = device.createBindGroupLayout({
+      label: "compute-bgl",
+      entries: [
+        { binding: 0, visibility: GPUShaderStage.COMPUTE,  buffer: { type: "uniform", minBindingSize: 64 } },
+        { binding: 1, visibility: GPUShaderStage.COMPUTE,  buffer: { type: "storage" } },
+        { binding: 2, visibility: GPUShaderStage.COMPUTE,  buffer: { type: "storage" } },
+        { binding: 3, visibility: GPUShaderStage.COMPUTE,  buffer: { type: "storage" } }
+      ]
+    });
+
+    const pipelineLayout = device.createPipelineLayout({
+      label: "compute-pipeline-layout",
+      bindGroupLayouts: [computeBGL]
+    });
+
+    computePipeline = device.createComputePipeline({
+      label: "compute-pipeline",
+      layout: pipelineLayout,
+      compute: { module, entryPoint: "main" }
+    });
+
+    computeBindGroup = device.createBindGroup({
+      label: "compute-bg",
+      layout: computeBGL,
+      entries: [
+        { binding: 0, resource: { buffer: computeUniform } },
+        { binding: 1, resource: { buffer: storageA } },
+        { binding: 2, resource: { buffer: storageB } },
+        { binding: 3, resource: { buffer: storageC } }
+      ]
+    });
+  }
+
+  // Render (fragment con sampler + texture + uniform 8B)
+  {
+    const module = device.createShaderModule({ code: DRAW_WGSL });
+
+    const fragBGL = device.createBindGroupLayout({
+      label: "frag-bgl",
+      entries: [
+        { binding: 0, visibility: GPUShaderStage.FRAGMENT, sampler: { type: "filtering" } },
+        { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: "float" } },
+        { binding: 2, visibility: GPUShaderStage.FRAGMENT, buffer: { type: "uniform", minBindingSize: 8 } }
+      ]
+    });
+
+    const pipelineLayout = device.createPipelineLayout({
+      label: "render-pipeline-layout",
+      bindGroupLayouts: [fragBGL]
+    });
+
+    renderPipeline = device.createRenderPipeline({
+      label: "render-pipeline",
+      layout: pipelineLayout,
+      vertex: { module, entryPoint: "vs" },
+      fragment: {
+        module,
+        entryPoint: "fs",
+        targets: [{ format }]
+      },
+      primitive: { topology: "triangle-list" }
+    });
+
+    fragmentBindGroup = device.createBindGroup({
+      label: "frag-bg",
+      layout: fragBGL,
+      entries: [
+        { binding: 0, resource: drawSampler },
+        { binding: 1, resource: drawTextureView },
+        { binding: 2, resource: { buffer: drawUniform } }
+      ]
+    });
+  }
+
+  // ===== Escribir uniformes iniciales =====
+  // Convertir Mat4 (number[]) a Float32Array antes de escribir:
+  const mvp: Mat4 = [
+    1,0,0,0,
+    0,1,0,0,
+    0,0,1,0,
+    0,0,0,1
+  ];
+  device.queue.writeBuffer(computeUniform, 0, new Float32Array(mvp));
+
+  const aspect = canvas.width > 0 ? canvas.width / canvas.height : 1;
+  const drawData = new Float32Array([1.0, aspect]); // pointSize, aspect
+  device.queue.writeBuffer(drawUniform, 0, drawData);
+
+  // ===== Botones (opcionales) =====
+  document.getElementById("btnStart")?.addEventListener("click", start);
+  document.getElementById("btnStop")?.addEventListener("click", stop);
+  document.getElementById("btnReset")?.addEventListener("click", resetSim);
 }
 
-main();
+function encodeFrame(commandEncoder: GPUCommandEncoder) {
+  // Pass de compute
+  const cpass = commandEncoder.beginComputePass({ label: "compute-pass" });
+  cpass.setPipeline(computePipeline);
+  cpass.setBindGroup(0, computeBindGroup);
+  const N = 1024;
+  const workgroupSize = 64;
+  const groups = Math.ceil(N / workgroupSize);
+  cpass.dispatchWorkgroups(groups);
+  cpass.end();
+
+  // Pass de render
+  const textureView = context.getCurrentTexture().createView();
+  const rpass = commandEncoder.beginRenderPass({
+    label: "render-pass",
+    colorAttachments: [{
+      view: textureView,
+      clearValue: { r: 0.02, g: 0.02, b: 0.05, a: 1 },
+      loadOp: "clear",
+      storeOp: "store"
+    }]
+  });
+  rpass.setPipeline(renderPipeline);
+  rpass.setBindGroup(0, fragmentBindGroup);
+  rpass.draw(6, 1, 0, 0);
+  rpass.end();
+}
+
+function frame() {
+  if (!isRunning) return;
+  const encoder = device.createCommandEncoder({ label: "main-encoder" });
+  encodeFrame(encoder);
+  device.queue.submit([encoder.finish()]);
+  frameHandle = requestAnimationFrame(frame);
+}
+
+function start() {
+  if (isRunning) return;
+  isRunning = true;
+  frame();
+}
+
+function stop() {
+  isRunning = false;
+  if (frameHandle) cancelAnimationFrame(frameHandle);
+}
+
+function resetSim() {
+  stop();
+  // Reinicializa buffers si quieres; aquí vaciamos storageC:
+  const zeroes = new Float32Array(1024);
+  device.queue.writeBuffer(storageC, 0, zeroes);
+}
+
+init().catch(err => {
+  console.error(err);
+  alert(err?.message ?? err);
+});

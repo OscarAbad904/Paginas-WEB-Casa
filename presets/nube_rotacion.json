@@ -1,0 +1,26 @@
+{
+  "description": "Nube esf\u00e9rica ligeramente rotante \u2192 colapso + disco",
+  "nParticles": 4000,
+  "gasFrac": 0.8,
+  "seed": 42,
+  "params": {
+    "G": 0.006674,
+    "eps": 0.01,
+    "gamma": 1.4,
+    "kpress": 1.0,
+    "hKernel": 0.08,
+    "nu": 0.05,
+    "tau": 0.5,
+    "dtMax": 0.01,
+    "warp": 1,
+    "enableGas": true,
+    "enableDrag": true,
+    "enableCollisions": false,
+    "rhoThresh": 6.0,
+    "vMax": 10.0,
+    "theta": 0.6,
+    "gravMode": "auto",
+    "quality": "med",
+    "autoReduceN": true
+  }
+}

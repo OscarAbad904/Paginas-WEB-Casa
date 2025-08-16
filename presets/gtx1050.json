@@ -1,0 +1,26 @@
+{
+  "description": "Preset optimizado para GTX 1050 (N=8000, BH, h=0.08, gas 60%)",
+  "nParticles": 8000,
+  "gasFrac": 0.6,
+  "seed": 1050,
+  "params": {
+    "G": 0.0065,
+    "eps": 0.01,
+    "gamma": 1.4,
+    "kpress": 0.9,
+    "hKernel": 0.08,
+    "nu": 0.04,
+    "tau": 0.4,
+    "dtMax": 0.008,
+    "warp": 10,
+    "enableGas": true,
+    "enableDrag": true,
+    "enableCollisions": true,
+    "rhoThresh": 6.0,
+    "vMax": 10.0,
+    "theta": 0.6,
+    "gravMode": "bh",
+    "quality": "med",
+    "autoReduceN": true
+  }
+}

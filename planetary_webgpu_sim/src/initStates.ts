@@ -50,3 +50,26 @@ export function initPolvoAlto(n: number, gasFrac: number, seedNum: number): Part
   // similar al disco pero con menos gas
   return initDiscoKepler(n, gasFrac, seedNum);
 }
+
+
+export function initDiscoEstable(n: number, gasFrac: number, seedNum: number): ParticleInit[] {
+  // Basado en initDiscoKepler pero disco más fino (menor dispersión en Y)
+  // y radios más concentrados en 0.4–1.2 (UA relativas del sistema).
+  const seed = { v: seedNum >>> 0 };
+  const out: ParticleInit[] = [];
+  for (let i=0; i<n; i++) {
+    const r = 0.4 + 0.8 * Math.abs(gaussian(seed)); // concentrado
+    const ang = 2*Math.PI * rand(seed);
+    const x = r * Math.cos(ang);
+    const z = r * Math.sin(ang);
+    const y = (gaussian(seed) * 0.02); // disco MUY fino
+    const v = Math.sqrt(1.0 / Math.max(0.1, r)); // kepleriano
+    const vx = -v * Math.sin(ang) * (1.0 + 0.02*gaussian(seed));
+    const vz =  v * Math.cos(ang) * (1.0 + 0.02*gaussian(seed));
+    const vy = 0.0 + 0.01*gaussian(seed);
+    const type = (i < n*gasFrac) ? 0 : 1;
+    const mass = (type === 0) ? 1.0/n : 2.0/n;
+    out.push({ pos: [x,y,z], vel: [vx,vy,vz], mass, type });
+  }
+  return out;
+}

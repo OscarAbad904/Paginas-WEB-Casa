@@ -1,5 +1,5 @@
 export type SimParams = {
-  G: number;
+G: number;
   eps: number;      // softening
   theta: number;     // BH opening angle
   gamma: number;    // gas
@@ -17,12 +17,18 @@ export type SimParams = {
   enableGas: boolean;
   enableDrag: boolean;
   enableCollisions: boolean;
+  Mstar: number;
+  collisionsEvery: number;
+  volumeScale: number;
+  useAdaptiveDt: boolean;
+  cfl: number;
+  eta: number;
 };
 
 export type GravMode = 'auto'|'bh'|'n2';
 export type Quality = 'low'|'med'|'high';
 
-export type PresetName = "nube_rotacion" | "disco_kepler" | "polvo_alto";
+export type PresetName = "nube_rotacion" | "disco_kepler" | "polvo_alto" | "disco_estable";
 
 export interface ParticleInit {
   pos: [number, number, number];

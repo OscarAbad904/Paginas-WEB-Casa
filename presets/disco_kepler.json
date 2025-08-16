@@ -1,0 +1,26 @@
+{
+  "description": "Disco Kepleriano con ruido inicial \u2192 inestabilidades",
+  "nParticles": 5000,
+  "gasFrac": 0.7,
+  "seed": 123,
+  "params": {
+    "G": 0.006674,
+    "eps": 0.01,
+    "gamma": 1.4,
+    "kpress": 0.8,
+    "hKernel": 0.06,
+    "nu": 0.03,
+    "tau": 0.4,
+    "dtMax": 0.008,
+    "warp": 10,
+    "enableGas": true,
+    "enableDrag": true,
+    "enableCollisions": false,
+    "rhoThresh": 6.0,
+    "vMax": 10.0,
+    "theta": 0.6,
+    "gravMode": "auto",
+    "quality": "med",
+    "autoReduceN": true
+  }
+}
