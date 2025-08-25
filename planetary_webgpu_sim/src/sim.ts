@@ -90,27 +90,39 @@ export class Simulation {
     // === Pipelines y bind groups ===
     const module = this.device.createShaderModule({ code: computeWGSL });
 
-    this.pDensity = this.device.createComputePipeline({
-      layout: 'auto',
-      compute: { module, entryPoint: 'compute_density' }
-    });
-    this.pForce = this.device.createComputePipeline({
-      layout: 'auto',
-      compute: { module, entryPoint: 'compute_forces' }
-    });
-    this.pIntegrate = this.device.createComputePipeline({
-      layout: 'auto',
-      compute: { module, entryPoint: 'integrate' }
-    });
-    this.pCollide = this.device.createComputePipeline({
-      layout: 'auto',
-      compute: { module, entryPoint: 'collisions' }
+    // Definir explícitamente los BindGroupLayouts para evitar discrepancias entre
+    // los layouts "auto" generados por distintos entry points.
+  const bgl0 = this.device.createBindGroupLayout({
+      entries: [
+    { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform', minBindingSize: 64 } }, // params UBO
+    { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-only-storage' } }, // pos_type
+    { binding: 2, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-only-storage' } }, // vel_mass
+    { binding: 3, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } }, // aux
+    { binding: 4, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } }, // accel
+    { binding: 5, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } }, // metricsOut
+    { binding: 6, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } }, // velHalf
+      ]
     });
 
-    // group(0): params + buffers
-    const layout0 = this.pDensity.getBindGroupLayout(0);
+    const bgl1 = this.device.createBindGroupLayout({
+      entries: [
+        { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-only-storage' } }, // bh_nodesA
+        { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-only-storage' } }, // bh_nodesB
+        { binding: 2, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-only-storage' } }, // bh_children
+        { binding: 3, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform', minBindingSize: 8 } }, // bh_info UBO (vec2<u32>)
+      ]
+    });
+
+    const pipelineLayout = this.device.createPipelineLayout({ bindGroupLayouts: [bgl0, bgl1] });
+
+  this.pDensity = this.device.createComputePipeline({ layout: pipelineLayout, compute: { module, entryPoint: 'compute_density' } });
+  this.pForce = this.device.createComputePipeline({ layout: pipelineLayout, compute: { module, entryPoint: 'compute_forces' } });
+  this.pIntegrate = this.device.createComputePipeline({ layout: pipelineLayout, compute: { module, entryPoint: 'integrate' } });
+  this.pCollide = this.device.createComputePipeline({ layout: pipelineLayout, compute: { module, entryPoint: 'collisions' } });
+
+    // group(0): params + buffers (usar el layout explícito bgl0)
     this.bg0 = this.device.createBindGroup({
-      layout: layout0,
+      layout: bgl0,
       entries: [
         { binding: 0, resource: { buffer: this.paramsUBO } },
         { binding: 1, resource: { buffer: this.posType } },
@@ -122,7 +134,7 @@ export class Simulation {
     });
 
     // group(1): BH (dummy, useBH=0)
-    const layout1 = this.pDensity.getBindGroupLayout(1);
+  // group(1): BH (dummy, useBH=0) — usar bgl1
     this.bhNodesA = this.device.createBuffer({ size: 16, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST, label: 'bh_nodesA' });
     this.bhNodesB = this.device.createBuffer({ size: 16, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST, label: 'bh_nodesB' });
     this.bhChildren = this.device.createBuffer({ size: 16, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST, label: 'bh_children' });
@@ -131,7 +143,7 @@ export class Simulation {
     this.device.queue.writeBuffer(this.bhInfoUBO, 0, new Uint32Array([0, 0, 0, 0]));
 
     this.bg1 = this.device.createBindGroup({
-      layout: layout1,
+      layout: bgl1,
       entries: [
         { binding: 0, resource: { buffer: this.bhNodesA } },
         { binding: 1, resource: { buffer: this.bhNodesB } },
@@ -159,7 +171,7 @@ export class Simulation {
     dv.setFloat32(o, params.tau ?? 0.5, true);     o += 4;
     dv.setFloat32(o, dt ?? 0, true);               o += 4;
     dv.setFloat32(o, params.rhoThresh ?? 4.0, true);o += 4;
-    dv.setFloat32(o, params.vMax ?? 8.0, true);     o += 4;
+  dv.setFloat32(o, params.vMax ?? 2.0, true);     o += 4;
     dv.setFloat32(o, params.theta ?? 0.6, true);    o += 4;
     dv.setFloat32(o, params.Mstar ?? 1.0, true);    o += 4;
     dv.setUint32(o, params.enableGas ? 1 : 0, true);        o += 4;
@@ -177,11 +189,11 @@ export class Simulation {
     pass.setBindGroup(0, this.bg0);
     if (this.bg1) pass.setBindGroup(1, this.bg1);
 
-    pass.setPipeline(this.pDensity);   pass.dispatchWorkgroups(groups);
-    pass.setPipeline(this.pForce);     pass.dispatchWorkgroups(groups);
-    pass.setPipeline(this.pIntegrate); pass.dispatchWorkgroups(groups);
+  pass.setPipeline(this.pDensity!);   pass.dispatchWorkgroups(groups);
+  pass.setPipeline(this.pForce!);     pass.dispatchWorkgroups(groups);
+  pass.setPipeline(this.pIntegrate!); pass.dispatchWorkgroups(groups);
     // Colisiones (opcional): el WGSL respeta enableCollisions
-    if (this.pCollide) { pass.setPipeline(this.pCollide); pass.dispatchWorkgroups(groups); }
+  if (this.pCollide) { pass.setPipeline(this.pCollide); pass.dispatchWorkgroups(groups); }
 
     pass.end();
   }

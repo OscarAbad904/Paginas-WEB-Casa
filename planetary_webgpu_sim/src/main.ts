@@ -28,7 +28,7 @@ function getCanvas(): HTMLCanvasElement {
 const GRID_W = 128;
 const GRID_H = 128;
 const MASS_FP = 1e6;          // masa en punto fijo para atomics (u32)
-const BASE_PX = 5.0;          // tamaño base partícula (antes de masa/densidad)
+const BASE_PX = 3.0;          // tamaño base partícula (antes de masa/densidad)
 const ACC_RATE = 0.35;        // acreción (masa/seg * densidad_norm=1)
 const DENSITY_NORM = 10.0;    // normalizador densidad (si lo usas por grid)
 const MAX_CLUSTERS = 256;     // máximo de cúmulos pintados
@@ -39,6 +39,8 @@ const KSOLID = 8.0;               // px por masa sólida
 const KGAS = 10.0;                // px por masa gas (extra sobre sólido)
 const RHO_SOLID = 1.0;            // densidad ref (arbitraria)
 const RHO_GAS = 0.5;
+const MSTAR = 50.0;               // masa central (ajustable) — reducido para estabilidad
+const VELOCITY_SCALE = 0.08;      // factor para reducir velocidades iniciales — más bajo
 
 /** ========================= WebGPU handles ========================= **/
 let device!: GPUDevice;
@@ -48,10 +50,29 @@ let format!: GPUTextureFormat;
 let clearGridPipeline!: GPUComputePipeline;
 let scatterGridPipeline!: GPUComputePipeline;
 let simPipeline!: GPUComputePipeline;
+let accPipeline!: GPUComputePipeline;
+let kickDriftPipeline!: GPUComputePipeline;
+let finalKickPipeline!: GPUComputePipeline;
 let renderParticlesPipeline!: GPURenderPipeline;
 
 let findClustersPipeline!: GPUComputePipeline;
 let renderClustersPipeline!: GPURenderPipeline;
+
+// BindGroupLayouts / PipelineLayouts explícitos para evitar discrepancias entre
+// distintos entry points que generen layouts "auto" incompatibles.
+let bglClear!: GPUBindGroupLayout;
+let bglScatter!: GPUBindGroupLayout;
+let bglSim!: GPUBindGroupLayout;
+let bglFind!: GPUBindGroupLayout;
+let bglRender!: GPUBindGroupLayout;
+let bglRenderClusters!: GPUBindGroupLayout;
+
+let plClear!: GPUPipelineLayout;
+let plScatter!: GPUPipelineLayout;
+let plSim!: GPUPipelineLayout;
+let plFind!: GPUPipelineLayout;
+let plRender!: GPUPipelineLayout;
+let plRenderClusters!: GPUPipelineLayout;
 
 let bindGroupClear!: GPUBindGroup;
 let bindGroupScatter!: GPUBindGroup;
@@ -64,6 +85,8 @@ let bindGroupRenderClusters!: GPUBindGroup;
 /** Buffers principales **/
 let particlesBuf: GPUBuffer | null = null;   // vec4(x,y, mass, type)
 let velBuf:       GPUBuffer | null = null;   // vec4(vx,vy, sizePx, _)
+let velHalfBuf:   GPUBuffer | null = null;   // vec4(vx,vy, _, _)
+let accelBuf:     GPUBuffer | null = null;   // vec4(ax,ay,_, potential)
 let uniformBuf:   GPUBuffer | null = null;   // Uniforms (ver WGSL)
 let gridSolidBuf: GPUBuffer | null = null;   // atomic<u32> masa sólida por celda (punto fijo)
 let gridGasBuf:   GPUBuffer | null = null;   // atomic<u32> masa gas por celda (punto fijo)
@@ -167,8 +190,9 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
   let m = max(1e-6, posType[i].z);
   let t = posType[i].w;
 
-  let gx = i32(clamp((p.x * 0.5 + 0.5) * uni.grid.x, 0.0, uni.grid.x - 1.0));
-  let gy = i32(clamp((p.y * 0.5 + 0.5) * uni.grid.y, 0.0, uni.grid.y - 1.0));
+  // mapear a interior del grid para evitar acumulación en bordes: [1, grid-2]
+  let gx = i32(clamp((p.x * 0.5 + 0.5) * uni.grid.x, 1.0, uni.grid.x - 2.0));
+  let gy = i32(clamp((p.y * 0.5 + 0.5) * uni.grid.y, 1.0, uni.grid.y - 2.0));
   let idx = u32(gy) * u32(uni.grid.x) + u32(gx);
 
   let mfp = u32(clamp(round(m * MASS_FP), 1.0, 4294967295.0));
@@ -183,45 +207,62 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 /** Simulación (gravedad central + acreción + tamaño por masa/densidad proxy) */
 const SIM_WGSL = /* wgsl */`
 ${UNIFORMS_LAYOUT}
-@group(0) @binding(0) var<storage, read_write> posType : array<vec4<f32>>;
-@group(0) @binding(1) var<storage, read_write> vel     : array<vec4<f32>>;
+@group(0) @binding(0) var<storage, read_write> posType : array<vec4<f32>>; // x,y,mass,type
+@group(0) @binding(1) var<storage, read_write> vel     : array<vec4<f32>>; // vx,vy,size,_
 @group(0) @binding(2) var<uniform> uni : Uniforms;
+@group(0) @binding(3) var<storage, read_write> velHalf : array<vec4<f32>>; // vx,vy,_,_
+@group(0) @binding(4) var<storage, read_write> accelBuf : array<vec4<f32>>; // ax,ay,_,phi
 
-fn density_proxy(p: vec2<f32>) -> f32 {
-  let r = length(p);
-  return clamp(1.0 - r, 0.0, 1.0);
+fn computeAccel2D(pi: vec2<f32>, i: u32) -> vec2<f32> {
+  var a = vec2<f32>(0.0, 0.0);
+  let eps2 = uni.eps * uni.eps;
+  for (var j: u32 = 0u; j < arrayLength(&posType); j = j + 1u) {
+    if (j == i) { continue; }
+    let pj = posType[j].xy;
+    let mj = posType[j].z;
+    let rvec = pj - pi;
+    let r2 = dot(rvec, rvec) + eps2;
+    let invr3 = inverseSqrt(r2 * r2 * r2);
+    a += uni.grav * mj * rvec * invr3;
+  }
+  return a;
 }
 
 @compute @workgroup_size(256)
-fn step(@builtin(global_invocation_id) gid: vec3<u32>) {
+fn computeAccelerations(@builtin(global_invocation_id) gid: vec3<u32>) {
   let i = gid.x;
   if (i >= arrayLength(&posType)) { return; }
+  let p = posType[i].xy;
+  let a = computeAccel2D(p, i);
+  accelBuf[i] = vec4<f32>(a.x, a.y, 0.0, 0.0);
+}
 
-  var p = posType[i].xy;
-  var v = vel[i].xy;
-  var m = posType[i].z;
+@compute @workgroup_size(256)
+fn kickDrift(@builtin(global_invocation_id) gid: vec3<u32>) {
+  let i = gid.x;
+  if (i >= arrayLength(&posType)) { return; }
+  let dt = uni.dt;
+  let a = accelBuf[i].xy;
+  let v = vel[i].xy;
+  let v_half = v + a * (0.5 * dt);
+  velHalf[i] = vec4<f32>(v_half.x, v_half.y, 0.0, 0.0);
+  let p_new = posType[i].xy + v_half * dt;
+  posType[i].x = p_new.x; posType[i].y = p_new.y;
+}
 
-  let dens = density_proxy(p);
-  m = m + uni.accRate * dens * uni.dt;
-  posType[i].z = m;
-
-  let r2 = max(dot(p,p), 1e-6);
-  let invr = inverseSqrt(r2 + uni.eps*uni.eps);
-  let a = -uni.grav * p * invr * invr;
-  v += a * uni.dt;
-  p += v * uni.dt;
-  v *= 0.999;
-
-  if (abs(p.x) > 1.05) { v.x = -v.x * 0.95; p.x = clamp(p.x, -1.05, 1.05); }
-  if (abs(p.y) > 1.05) { v.y = -v.y * 0.95; p.y = clamp(p.y, -1.05, 1.05); }
-
-  let massScale = pow(m, 0.3333333);
-  let densScale = (0.7 + 0.3 * log(1.0 + 5.0 * dens));
-  let sizePx = clamp(uni.basePx * massScale * densScale, 2.0, 16.0);
-
-  posType[i].x = p.x; posType[i].y = p.y;
-  vel[i].x = v.x;     vel[i].y = v.y;
-  vel[i].z = sizePx;
+@compute @workgroup_size(256)
+fn finalKick(@builtin(global_invocation_id) gid: vec3<u32>) {
+  let i = gid.x;
+  if (i >= arrayLength(&posType)) { return; }
+  let dt = uni.dt;
+  let a = accelBuf[i].xy;
+  var v = velHalf[i].xy + a * (0.5 * dt);
+  // clamp
+  let speed = length(v);
+  if (speed > uni.basePx * 100.0) { // rough vMax guard using basePx as scale
+    v = v * (uni.basePx * 100.0 / speed);
+  }
+  vel[i].x = v.x; vel[i].y = v.y;
 }
 `;
 
@@ -413,20 +454,74 @@ fn fs(in:VSOut) -> @location(0) vec4<f32> {
 
 /** ========================= Construcción de pipelines ========================= **/
 async function buildPipelines() {
-  clearGridPipeline = await device.createComputePipelineAsync({
-    layout: "auto",
-    compute: { module: device.createShaderModule({ code: CLEAR_GRID_WGSL }), entryPoint: "main" }
+  // Crear BindGroupLayouts específicos que coincidan con las declaraciones WGSL
+  bglClear = device.createBindGroupLayout({
+    entries: [
+      { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+      { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+      { binding: 2, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+    ]
   });
-  scatterGridPipeline = await device.createComputePipelineAsync({
-    layout: "auto",
-    compute: { module: device.createShaderModule({ code: SCATTER_GRID_WGSL }), entryPoint: "main" }
+  plClear = device.createPipelineLayout({ bindGroupLayouts: [bglClear] });
+
+  bglScatter = device.createBindGroupLayout({
+    entries: [
+      { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-only-storage' } },
+      { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+      { binding: 2, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+      { binding: 3, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform', minBindingSize: 64 } },
+    ]
   });
-  simPipeline = await device.createComputePipelineAsync({
-    layout: "auto",
-    compute: { module: device.createShaderModule({ code: SIM_WGSL }), entryPoint: "step" }
+  plScatter = device.createPipelineLayout({ bindGroupLayouts: [bglScatter] });
+
+  bglSim = device.createBindGroupLayout({
+    entries: [
+      { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+      { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+      { binding: 2, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform', minBindingSize: 64 } },
+      { binding: 3, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+      { binding: 4, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+    ]
   });
+  plSim = device.createPipelineLayout({ bindGroupLayouts: [bglSim] });
+
+  bglFind = device.createBindGroupLayout({
+    entries: [
+      { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+      { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+      { binding: 2, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+      { binding: 3, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+      { binding: 4, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform', minBindingSize: 64 } },
+    ]
+  });
+  plFind = device.createPipelineLayout({ bindGroupLayouts: [bglFind] });
+
+  bglRender = device.createBindGroupLayout({
+    entries: [
+      { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'read-only-storage' } },
+      { binding: 1, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'read-only-storage' } },
+      { binding: 2, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform', minBindingSize: 64 } },
+    ]
+  });
+  plRender = device.createPipelineLayout({ bindGroupLayouts: [bglRender] });
+
+  bglRenderClusters = device.createBindGroupLayout({
+    entries: [
+      { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'read-only-storage' } },
+      { binding: 1, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform', minBindingSize: 64 } },
+    ]
+  });
+  plRenderClusters = device.createPipelineLayout({ bindGroupLayouts: [bglRenderClusters] });
+
+  clearGridPipeline = await device.createComputePipelineAsync({ layout: plClear, compute: { module: device.createShaderModule({ code: CLEAR_GRID_WGSL }), entryPoint: "main" } });
+  scatterGridPipeline = await device.createComputePipelineAsync({ layout: plScatter, compute: { module: device.createShaderModule({ code: SCATTER_GRID_WGSL }), entryPoint: "main" } });
+  simPipeline = await device.createComputePipelineAsync({ layout: plSim, compute: { module: device.createShaderModule({ code: SIM_WGSL }), entryPoint: "computeAccelerations" } });
+  // extra compute pipelines using the same SIM_WGSL module (accelerations + leapfrog)
+  accPipeline = await device.createComputePipelineAsync({ layout: plSim, compute: { module: device.createShaderModule({ code: SIM_WGSL }), entryPoint: "computeAccelerations" } });
+  kickDriftPipeline = await device.createComputePipelineAsync({ layout: plSim, compute: { module: device.createShaderModule({ code: SIM_WGSL }), entryPoint: "kickDrift" } });
+  finalKickPipeline = await device.createComputePipelineAsync({ layout: plSim, compute: { module: device.createShaderModule({ code: SIM_WGSL }), entryPoint: "finalKick" } });
   renderParticlesPipeline = await device.createRenderPipelineAsync({
-    layout: "auto",
+  layout: device.createPipelineLayout({ bindGroupLayouts: [bglRender] }),
     vertex:   { module: device.createShaderModule({ code: RENDER_PARTICLES_WGSL }), entryPoint: "vs" },
     fragment: { 
       module: device.createShaderModule({ code: RENDER_PARTICLES_WGSL }), entryPoint: "fs",
@@ -440,12 +535,8 @@ async function buildPipelines() {
     primitive:{ topology: "triangle-list" }
   });
 
-  findClustersPipeline = await device.createComputePipelineAsync({
-    layout: "auto",
-    compute: { module: device.createShaderModule({ code: FIND_CLUSTERS_WGSL }), entryPoint: "main" }
-  });
-  renderClustersPipeline = await device.createRenderPipelineAsync({
-    layout: "auto",
+  findClustersPipeline = await device.createComputePipelineAsync({ layout: plFind, compute: { module: device.createShaderModule({ code: FIND_CLUSTERS_WGSL }), entryPoint: "main" } });
+  renderClustersPipeline = await device.createRenderPipelineAsync({ layout: plRenderClusters,
     vertex:   { module: device.createShaderModule({ code: RENDER_CLUSTERS_WGSL }), entryPoint: "vs" },
     fragment: { 
       module: device.createShaderModule({ code: RENDER_CLUSTERS_WGSL }), entryPoint: "fs",
@@ -471,6 +562,8 @@ function allocBuffers(N:number) {
 
   particlesBuf = device.createBuffer({ size: bytes, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC });
   velBuf       = device.createBuffer({ size: bytes, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC });
+  velHalfBuf   = device.createBuffer({ size: bytes, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC });
+  accelBuf     = device.createBuffer({ size: bytes, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC });
   uniformBuf   = device.createBuffer({ size: 64,   usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
 
   gridSolidBuf = device.createBuffer({ size: GRID_W*GRID_H*4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
@@ -488,7 +581,7 @@ function allocBuffers(N:number) {
 function makeBindGroups() {
   // clear_grid: gridSolid + gridGas + clustersCount
   bindGroupClear = device.createBindGroup({
-    layout: clearGridPipeline.getBindGroupLayout(0),
+  layout: bglClear,
     entries: [
       { binding: 0, resource: { buffer: gridSolidBuf! } },
       { binding: 1, resource: { buffer: gridGasBuf! } },
@@ -498,7 +591,7 @@ function makeBindGroups() {
 
   // scatter_grid: posType + gridSolid + gridGas + uniforms
   bindGroupScatter = device.createBindGroup({
-    layout: scatterGridPipeline.getBindGroupLayout(0),
+  layout: bglScatter,
     entries: [
       { binding: 0, resource: { buffer: particlesBuf! } },
       { binding: 1, resource: { buffer: gridSolidBuf! } },
@@ -509,17 +602,19 @@ function makeBindGroups() {
 
   // sim: posType + vel + uniforms
   bindGroupSim = device.createBindGroup({
-    layout: simPipeline.getBindGroupLayout(0),
+  layout: bglSim,
     entries: [
       { binding: 0, resource: { buffer: particlesBuf! } },
       { binding: 1, resource: { buffer: velBuf! } },
-      { binding: 2, resource: { buffer: uniformBuf! } },
+  { binding: 2, resource: { buffer: uniformBuf! } },
+  { binding: 3, resource: { buffer: velHalfBuf! } },
+  { binding: 4, resource: { buffer: accelBuf! } },
     ],
   });
 
   // render partículas: posType + vel + uniforms
   bindGroupRenderParticles = device.createBindGroup({
-    layout: renderParticlesPipeline.getBindGroupLayout(0),
+  layout: bglRender,
     entries: [
       { binding: 0, resource: { buffer: particlesBuf! } },
       { binding: 1, resource: { buffer: velBuf! } },
@@ -529,7 +624,7 @@ function makeBindGroups() {
 
   // find_clusters: gridSolid + gridGas + clustersCount + clustersData + uniforms
   bindGroupFindClusters = device.createBindGroup({
-    layout: findClustersPipeline.getBindGroupLayout(0),
+  layout: bglFind,
     entries: [
       { binding: 0, resource: { buffer: gridSolidBuf! } },
       { binding: 1, resource: { buffer: gridGasBuf! } },
@@ -541,7 +636,7 @@ function makeBindGroups() {
 
   // render cúmulos: clustersData + uniforms   ← ¡ojo, aquí añadimos el uniform!
   bindGroupRenderClusters = device.createBindGroup({
-    layout: renderClustersPipeline.getBindGroupLayout(0),
+  layout: bglRenderClusters,
     entries: [
       { binding: 0, resource: { buffer: clustersBuf! } },
       { binding: 1, resource: { buffer: uniformBuf! } },
@@ -566,24 +661,42 @@ function initStateFromUI(realloc=true) {
     for (let i=0;i<nParticles;i++) {
       const r = Math.sqrt(rand(seedObj)) * 0.8;
       const a = rand(seedObj) * Math.PI * 2;
-      pos[i*4+0] = r*Math.cos(a); pos[i*4+1] = r*Math.sin(a);
+  // evitar bordes: limitar radio máximo
+  const rClamped = Math.min(r, 0.6);
+      pos[i*4+0] = rClamped*Math.cos(a); pos[i*4+1] = rClamped*Math.sin(a);
       pos[i*4+2] = 1.0; pos[i*4+3] = (i < nParticles*gasFrac) ? 0 : 1;
-      vel[i*4+0] = -pos[i*4+1]*0.2; vel[i*4+1] =  pos[i*4+0]*0.2;
+  // velocidad tangencial aproximada (kepleriana respecto a masa central)
+  const Gparam = getNum('G', 0.006674);
+  const rForV = Math.max(rClamped, 1e-4);
+  const v0 = Math.sqrt(Math.max(1e-8, Gparam * MSTAR / rForV));
+  vel[i*4+0] = -Math.sin(a) * v0 * VELOCITY_SCALE; vel[i*4+1] = Math.cos(a) * v0 * VELOCITY_SCALE;
       vel[i*4+2] = BASE_PX;
     }
   } else {
     for (let i=0;i<nParticles;i++) {
       const r = 0.2 + Math.sqrt(rand(seedObj)) * 0.8;
       const a = rand(seedObj) * Math.PI * 2;
-      pos[i*4+0] = r*Math.cos(a); pos[i*4+1] = r*Math.sin(a);
+  const rClamped = Math.min(r, 0.6);
+      pos[i*4+0] = rClamped*Math.cos(a); pos[i*4+1] = rClamped*Math.sin(a);
       pos[i*4+2] = 1.0; pos[i*4+3] = (i < nParticles*gasFrac) ? 0 : 1;
-      const v0 = Math.sqrt(0.3 / r);
-      vel[i*4+0] = -Math.sin(a)*v0; vel[i*4+1] = Math.cos(a)*v0;
+  const Gparam = getNum('G', 0.006674);
+  const rForV = Math.max(rClamped, 1e-4);
+  const v0 = Math.sqrt(Math.max(1e-8, Gparam * MSTAR / rForV));
+  vel[i*4+0] = -Math.sin(a) * v0 * VELOCITY_SCALE; vel[i*4+1] = Math.cos(a) * v0 * VELOCITY_SCALE;
       vel[i*4+2] = BASE_PX;
     }
   }
+  // insertar masa central grande en el centro (primera partícula)
+  if (nParticles > 0) {
+    pos[0] = 0.0; pos[1] = 0.0; pos[2] = MSTAR; pos[3] = 2.0; // tipo 2 = central
+    vel[0] = 0.0; vel[1] = 0.0; vel[2] = BASE_PX; vel[3] = 0.0;
+  }
   device.queue.writeBuffer(particlesBuf!, 0, pos);
   device.queue.writeBuffer(velBuf!, 0, vel);
+  // zero velHalf and accel buffers
+  const zeros = new Float32Array(nParticles * 4);
+  device.queue.writeBuffer(velHalfBuf!, 0, zeros);
+  device.queue.writeBuffer(accelBuf!, 0, zeros);
 }
 
 /** ========================= HUD / Export ========================= **/
@@ -648,13 +761,35 @@ function frame(t:number) {
 
   const encoder = device.createCommandEncoder();
 
-  // 1) Sim particles
+  // 1) Integrador leapfrog KDK: compute acc -> kickDrift -> recompute acc -> finalKick
   {
-    const pass = encoder.beginComputePass();
-    pass.setPipeline(simPipeline);
-    pass.setBindGroup(0, bindGroupSim);
-    pass.dispatchWorkgroups(Math.ceil(nParticles / 256));
-    pass.end();
+    // compute accelerations
+    const passA = encoder.beginComputePass();
+    passA.setPipeline(accPipeline);
+    passA.setBindGroup(0, bindGroupSim);
+    passA.dispatchWorkgroups(Math.ceil(nParticles / 256));
+    passA.end();
+
+    // half-kick + drift
+    const passK = encoder.beginComputePass();
+    passK.setPipeline(kickDriftPipeline);
+    passK.setBindGroup(0, bindGroupSim);
+    passK.dispatchWorkgroups(Math.ceil(nParticles / 256));
+    passK.end();
+
+    // recompute accelerations with updated positions
+    const passA2 = encoder.beginComputePass();
+    passA2.setPipeline(accPipeline);
+    passA2.setBindGroup(0, bindGroupSim);
+    passA2.dispatchWorkgroups(Math.ceil(nParticles / 256));
+    passA2.end();
+
+    // final kick
+    const passF = encoder.beginComputePass();
+    passF.setPipeline(finalKickPipeline);
+    passF.setBindGroup(0, bindGroupSim);
+    passF.dispatchWorkgroups(Math.ceil(nParticles / 256));
+    passF.end();
   }
 
   // 2) Clear grids + reset clusters count

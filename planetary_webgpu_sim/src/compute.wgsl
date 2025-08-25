@@ -27,6 +27,8 @@ struct SimParams {
 @group(0) @binding(1) var<storage, read_write> pos_type: array<vec4<f32>>;
 // vel.xyz + mass in w
 @group(0) @binding(2) var<storage, read_write> vel_mass: array<vec4<f32>>;
+// half-step velocities for leapfrog (vel_x, vel_y, vel_z, mass)
+@group(0) @binding(6) var<storage, read_write> velHalf: array<vec4<f32>>;
 // aux.x = density, aux.y = pressure, aux.z = alive (1/0), aux.w = radius
 @group(0) @binding(3) var<storage, read_write> aux: array<vec4<f32>>;
 // acceleration temp
@@ -104,12 +106,12 @@ fn compute_forces(@builtin(global_invocation_id) gid: vec3<u32>) {
     let mj = vel_mass[j].w;
     a += params.G * mj * rvec * invr3;
     phi += - params.G * mj / sqrt(r2);
+  }
 
-  // Estrella central en (0,0,0) con softening eps
+  // Estrella central en (0,0,0) con softening eps (UNA VEZ, fuera del bucle)
   let r2_star = dot(Pi, Pi) + eps2;
   let invr3_star = inverseSqrt(r2_star*r2_star*r2_star);
   a += - params.G * params.Mstar * Pi * invr3_star;
-    }
 
   if (params.enableGas != 0u) {
     // SPH presión/viscosidad (aprox: vecinos en radio h, O(N^2))
@@ -157,36 +159,42 @@ fn compute_forces(@builtin(global_invocation_id) gid: vec3<u32>) {
       a += (vgas - Vi) / max(params.tau, 1e-4);
     }
   }
-
   accel[i] = vec4<f32>(a, phi);
 }
 
-// Pass 3: integración leapfrog/Verlet (semi-impl)
+// Pass 3a: kick-drift (half kick -> drift positions)
 @compute @workgroup_size(256)
-fn integrate(@builtin(global_invocation_id) gid: vec3<u32>) {
+fn kickDrift(@builtin(global_invocation_id) gid: vec3<u32>) {
   let i = gid.x;
   if (i >= arrayLength(&pos_type)) { return; }
   if (aux[i].z < 0.5) { return; }
 
   let dt = params.dt;
-  var v = vel_mass[i].xyz;
-  var p = pos_type[i].xyz;
   let a = accel[i].xyz;
+  // half-step velocity
+  let v_half = vel_mass[i].xyz + a * (0.5 * dt);
+  velHalf[i] = vec4<f32>(v_half, vel_mass[i].w);
+  // drift
+  let p_new = pos_type[i].xyz + v_half * dt;
+  pos_type[i] = vec4<f32>(p_new, pos_type[i].w);
+}
 
-  // velocity Verlet (simplificado): v_{t+dt} = v + a*dt ; p_{t+dt} = p + v_{t+dt}*dt
+// Pass 3b: final kick (after recomputing accelerations with updated positions)
+@compute @workgroup_size(256)
+fn finalKick(@builtin(global_invocation_id) gid: vec3<u32>) {
+  let i = gid.x;
+  if (i >= arrayLength(&pos_type)) { return; }
+  if (aux[i].z < 0.5) { return; }
+
+  let dt = params.dt;
+  let a = accel[i].xyz;
+  var v = velHalf[i].xyz + a * (0.5 * dt);
   // clamp velocidad para estabilidad
-  let speed = length(v + a*dt);
+  let speed = length(v);
   if (speed > params.vMax) {
-    v = (v + a*dt) * (params.vMax / speed);
-  } else {
-    v = v + a*dt;
+    let f = params.vMax / speed;
+    v = v * f;
   }
-  v = v + a * dt;
-  p = p + v * dt;
-
-  pos_type[i].x = p.x;
-  pos_type[i].y = p.y;
-  pos_type[i].z = p.z;
   vel_mass[i].x = v.x;
   vel_mass[i].y = v.y;
   vel_mass[i].z = v.z;

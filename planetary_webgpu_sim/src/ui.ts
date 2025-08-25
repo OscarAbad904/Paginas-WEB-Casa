@@ -21,6 +21,12 @@ export function gatherParams(): SimParams {
     enableGas: (document.getElementById('toggleGas') as HTMLInputElement).checked,
     enableDrag: (document.getElementById('toggleDrag') as HTMLInputElement).checked,
     enableCollisions: (document.getElementById('toggleCollisions') as HTMLInputElement).checked,
+  Mstar: parseFloat((document.getElementById('Mstar') as HTMLInputElement)?.value ?? '100'),
+  collisionsEvery: parseInt((document.getElementById('collisionsEvery') as HTMLInputElement)?.value ?? '100', 10),
+  volumeScale: parseFloat((document.getElementById('volumeScale') as HTMLInputElement)?.value ?? '1'),
+  useAdaptiveDt: !!(document.getElementById('adaptiveDt') as HTMLInputElement)?.checked,
+  cfl: parseFloat((document.getElementById('cfl') as HTMLInputElement)?.value ?? '0.5'),
+  eta: parseFloat((document.getElementById('eta') as HTMLInputElement)?.value ?? '0.1'),
   };
 }
 
